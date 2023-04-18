@@ -1,0 +1,43 @@
+syntax = "proto3";
+package logcollector;
+
+enum ResponseTypes {
+    OK = 0;
+    BUSY = 1;
+    RESET = 2;
+}
+
+message TimestampRequest {
+    uint64 pid = 1;
+    double time = 2;
+    string payload = 3;
+}
+
+message OperationResponse {
+    bool is_ok = 1;
+    ResponseTypes response_type = 2;
+}
+
+message SessionStartRequest {
+    uint64 pid = 1;
+}
+
+enum SessionFinishReason {
+    SERVER_INTERRUPTED = 0;
+    CLIENT_INTERRUPTED = 1;
+}
+
+message SessionFinishRequest {
+    uint64 pid = 1;
+    SessionFinishReason reason = 2;
+}
+
+service LogCollector {
+    rpc ClassLoadStartStamp (TimestampRequest) returns (OperationResponse);
+    rpc ClassLoadFinishedStamp (TimestampRequest) returns (OperationResponse);
+    rpc ClassUnloadStartStamp (TimestampRequest) returns (OperationResponse);
+    rpc ClassUnloadFinishedStamp (TimestampRequest) returns (OperationResponse);
+    rpc StartSession (SessionStartRequest) returns (OperationResponse);
+    rpc FinishSession (SessionFinishRequest) returns (OperationResponse);
+}
+
