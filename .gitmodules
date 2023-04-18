@@ -1,0 +1,3 @@
+[submodule "clr-profiler"]
+	path = clr-profiler
+	url = https://github.com/comeillfoo/clr-profiler.git
