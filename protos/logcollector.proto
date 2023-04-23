@@ -8,7 +8,7 @@ enum ResponseTypes {
 }
 
 message TimestampRequest {
-    uint64 pid = 1;
+    uint32 pid = 1;
     double time = 2;
     string payload = 3;
 }
@@ -19,7 +19,7 @@ message OperationResponse {
 }
 
 message SessionStartRequest {
-    uint64 pid = 1;
+    uint32 pid = 1;
 }
 
 enum SessionFinishReason {
@@ -28,7 +28,7 @@ enum SessionFinishReason {
 }
 
 message SessionFinishRequest {
-    uint64 pid = 1;
+    uint32 pid = 1;
     SessionFinishReason reason = 2;
 }
 
