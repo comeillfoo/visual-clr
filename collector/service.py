@@ -52,6 +52,6 @@ class LogCollectorService(logcollector_pb2_grpc.LogCollectorServicer):
 def serve(port, app):
     logcollector_pb2_grpc.add_LogCollectorServicer_to_server(LogCollectorService(app), app.server)
     app.server.add_insecure_port(f'[::]:{port}')
-    print('server started')
+    print(f'server started: localhost:{port}')
     app.server.start()
     app.server.wait_for_termination()
