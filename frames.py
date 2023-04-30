@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 import tkinter as tk
+from tkinter import ttk
+import platform as plt
+import sys
 
 
 class ConnectionFrame(tk.Frame):
@@ -10,13 +13,16 @@ class ConnectionFrame(tk.Frame):
         title.grid(row=0, column=0, columnspan=4)
 
         # second layer: dropdown list
+        process_title = tk.Label(self, text='Процессы:')
+        process_title.grid(row=1, column=0, columnspan=1)
+
         process = tk.StringVar(self)
 
         processes = tk.OptionMenu(self, process, *controller.processes)
-        processes.grid(row=1, column=1, columnspan=2)
+        processes.grid(row=1, column=1, columnspan=3)
 
         # third layer: buttons
-        btn_connect = tk.Button(self, text='Connect')
+        btn_connect = tk.Button(self, text='Подключиться')
         def connect_cb(event):
             print(f'Connecting to {process.get()}...')
             controller.queues.start.put(int(process.get()))
@@ -25,7 +31,7 @@ class ConnectionFrame(tk.Frame):
         btn_connect.bind('<Button-1>', connect_cb)
         btn_connect.grid(row=2, column=0, columnspan=2)
 
-        btn_exit = tk.Button(self, text='Exit')
+        btn_exit = tk.Button(self, text='Выход')
         def exit_cb(event):
             controller.server.stop(None).wait()
             processes = controller.processes.clone()
@@ -50,9 +56,79 @@ class MonitorFrame(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
 
+        # tabs
+        tabsystem = ttk.Notebook(self)
+
+        tabs = [
+            CommonFrame(tabsystem, controller),
+            LogsFrame(tabsystem, controller),
+            MetricsFrame(tabsystem, controller),
+            ObjectsFrame(tabsystem, controller),
+        ]
+
+        for tab in tabs:
+            tabsystem.add(tab, text=tab.text)
+        tabsystem.grid(row=0, column=0, columnspan=4)
+
         def back_cb(event):
             controller.event_generate('<<FinishActiveSession>>')
 
-        btn_back = tk.Button(self, text='Disconnect')
+        btn_back = tk.Button(self, text='Назад')
         btn_back.bind('<Button-1>', back_cb)
-        btn_back.grid(row=0, column=1, columnspan=4)
+        btn_back.grid(row=1, column=0, columnspan=4)
+
+
+class CommonFrame(tk.Frame):
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
+
+        self.pid = tk.StringVar(self, 'PID: None')
+        pid = tk.Label(self, textvariable=self.pid)
+        pid.pack()
+
+        self.path = tk.StringVar(self, 'PATH:')
+        path = tk.Label(self, textvariable=self.path, wraplength=400)
+        path.pack()
+
+        osystem = tk.Label(self, text=f'ОС: {plt.platform()}')
+        osystem.pack()
+
+        bits = tk.Label(self, text=f'Разрядность: {plt.architecture()[0]}')
+        bits.pack()
+
+        arch = tk.Label(self, text=f'Архитектура: {plt.machine()}')
+        arch.pack()
+
+        version = sys.version.split('\n')[0].strip()
+        pyversion = tk.Label(self, text=f'Python v{version}')
+        pyversion.pack()
+
+        self.text = 'Общая информация'
+        controller.common = self
+
+
+class LogsFrame(tk.Frame):
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
+
+
+        self.text = 'Логи'
+        controller.taces = self
+
+
+class MetricsFrame(tk.Frame):
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
+
+
+        self.text = 'Метрики'
+        controller.metrics = self
+
+
+class ObjectsFrame(tk.Frame):
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
+
+
+        self.text = 'Объекты'
+        controller.metrics = self

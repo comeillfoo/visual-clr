@@ -8,6 +8,7 @@ from collector.context import SessionQueues
 from safe_structs import SafeSet
 from threading import Thread
 from queue import Queue
+import os
 
 
 class VisualCLRApp(tk.Tk):
@@ -83,3 +84,8 @@ class VisualCLRApp(tk.Tk):
             pid = self.queues.start.get()
             self.active_pid = pid
             self.show_frame(MonitorFrame)
+            self.init_tabs({ 'pid': pid, 'path': os.environ['PATH'] })
+
+    def init_tabs(self, data):
+        self.common.pid.set(f"PID: {data['pid']}")
+        self.common.path.set(f"PATH: {data['path']}")
