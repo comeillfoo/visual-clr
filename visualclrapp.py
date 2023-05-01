@@ -9,7 +9,7 @@ from safe_structs import SafeSet
 from threading import Thread
 from queue import Queue
 import os
-
+from commands import list_sdks, list_runtimes
 
 class VisualCLRApp(tk.Tk):
     def __init__(self, *args, **kwargs):
@@ -84,8 +84,11 @@ class VisualCLRApp(tk.Tk):
             pid = self.queues.start.get()
             self.active_pid = pid
             self.show_frame(MonitorFrame)
-            self.init_tabs({ 'pid': pid, 'path': os.environ['PATH'] })
+            self.init_tabs({ 'pid': pid, 'path': os.environ['PATH'], 'cmd': 'dotnet run' })
 
     def init_tabs(self, data):
         self.common.pid.set(f"PID: {data['pid']}")
         self.common.path.set(f"PATH: {data['path']}")
+        self.common.sdks.set(f"SDKs: {list_sdks(data['path'])}")
+        self.common.rts.set(f"Runtimes: {list_runtimes(data['path'])}")
+        self.common.cmd.set(f"CMD: {data['cmd']}")

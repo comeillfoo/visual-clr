@@ -82,13 +82,25 @@ class CommonFrame(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
 
-        self.pid = tk.StringVar(self, 'PID: None')
+        self.pid = tk.StringVar(self, 'PID:')
         pid = tk.Label(self, textvariable=self.pid)
         pid.pack()
+
+        self.cmd = tk.StringVar(self, 'CMD:')
+        cmd = tk.Label(self, textvariable=self.cmd)
+        cmd.pack()
 
         self.path = tk.StringVar(self, 'PATH:')
         path = tk.Label(self, textvariable=self.path, wraplength=400)
         path.pack()
+
+        self.sdks = tk.StringVar(self, 'SDKs:')
+        sdks = tk.Label(self, textvariable=self.sdks, wraplength=400)
+        sdks.pack()
+
+        self.rts = tk.StringVar(self, 'Runtimes:')
+        rts = tk.Label(self, textvariable=self.rts, wraplength=400)
+        rts.pack()
 
         osystem = tk.Label(self, text=f'ОС: {plt.platform()}')
         osystem.pack()
