@@ -9,13 +9,14 @@ from safe_structs import SafeSet
 from threading import Thread
 from queue import Queue
 import os
+from tkinter import messagebox as mb
 from commands import list_sdks, list_runtimes
 
 class VisualCLRApp(tk.Tk):
     def __init__(self, *args, **kwargs):
         # init members
-        self.processes = SafeSet()
-        self.processes.add(0)
+        self.processes = {}
+        self.processes[os.getpid()] = { 'pid': os.getpid(), 'cmd': 'dotnet run', 'path': os.environ['PATH'] }
         self.active_pid = None
         self.queues = SessionQueues(Queue(), Queue(1), Queue())
         self.server = grpc.server(futures.ThreadPoolExecutor(max_workers=4))
@@ -57,14 +58,15 @@ class VisualCLRApp(tk.Tk):
     def finish_session(self, event):
         if not self.queues.finish.empty():
             pid = self.queues.finish.get()
-            old_set = self.processes.clone()
-            self.processes.remove(pid)
-            new_set = self.processes.clone()
+            old_set = set(self.processes.keys())
+            del self.processes[pid]
+            new_set = set(self.processes.keys())
             if old_set != new_set:
                 self.frames[ConnectionFrame].event_generate('<<UpdateList>>')
             if pid == self.active_pid:
                 self.active_pid = None
-                self.show_frame(ConnectionFrame)
+                mb.showwarning('Connection lost', f'Disconnected from {pid}. All data now invalid')
+
 
     def finish_active_session(self, event):
         self.queues.finish.put(self.active_pid)
@@ -72,19 +74,24 @@ class VisualCLRApp(tk.Tk):
 
     def append_session(self, event):
         if not self.queues.pending.empty():
-            pid = self.queues.pending.get()
-            old_set = self.processes.clone()
-            self.processes.add(pid)
-            new_set = self.processes.clone()
+            request = self.queues.pending.get()
+            # TODO: the point of improvement
+            old_set = set(self.processes.keys())
+            self.processes[request.pid] = {
+                'pid': request.pid,
+                'cmd': request.cmd,
+                'path': request.path
+            }
+            new_set = set(self.processes.keys())
             if old_set != new_set:
                 self.frames[ConnectionFrame].event_generate('<<UpdateList>>')
 
     def start_session(self, event):
         if not self.queues.start.empty():
-            pid = self.queues.start.get()
-            self.active_pid = pid
+            data = self.queues.start.get()
+            self.active_pid = data['pid']
             self.show_frame(MonitorFrame)
-            self.init_tabs({ 'pid': pid, 'path': os.environ['PATH'], 'cmd': 'dotnet run' })
+            self.init_tabs(data)
 
     def init_tabs(self, data):
         self.common.pid.set(f"PID: {data['pid']}")

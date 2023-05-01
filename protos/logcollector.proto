@@ -20,6 +20,8 @@ message OperationResponse {
 
 message SessionStartRequest {
     uint32 pid = 1;
+    string cmd = 2;
+    string path = 3;
 }
 
 enum SessionFinishReason {

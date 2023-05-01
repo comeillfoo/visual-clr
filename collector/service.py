@@ -32,8 +32,8 @@ class LogCollectorService(logcollector_pb2_grpc.LogCollectorServicer):
 
 
     def StartSession(self, request: SessionStartRequest, context) -> OperationResponse:
-        print(f'Pending Session {request.pid}: {type(request.pid)}')
-        self.app.queues.pending.put(request.pid)
+        print(f'Pending Session {request.pid}: {request.cmd}')
+        self.app.queues.pending.put(request)
         self.app.event_generate('<<PendingSession>>')
         if self.app.active_pid == request.pid:
             # accept session
