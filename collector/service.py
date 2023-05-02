@@ -9,9 +9,12 @@ class LogCollectorService(logcollector_pb2_grpc.LogCollectorServicer):
 
 
     def _class_stamp_stub(self, request: TimestampRequest, operation: str) -> OperationResponse:
-        if request.pid != self.app.active_pid:
+        if request.pid != self.app.active_pid.get():
             return OperationResponse(is_ok=False, response_type=ResponseTypes.RESET)
-        print(f'class {request.payload} {operation} at {request.time}')
+        log = f'[{request.time}]: class {request.payload} {operation}\n'
+        print(log, end='')
+        self.app.queues.logs.put(log)
+        self.app.event_generate('<<AppendLog>>')
         return OperationResponse(is_ok=True, response_type=ResponseTypes.OK)
 
 
@@ -35,7 +38,7 @@ class LogCollectorService(logcollector_pb2_grpc.LogCollectorServicer):
         print(f'Pending Session {request.pid}: {request.cmd}')
         self.app.queues.pending.put(request)
         self.app.event_generate('<<PendingSession>>')
-        if self.app.active_pid == request.pid:
+        if self.app.active_pid.get() == request.pid:
             # accept session
             return OperationResponse(is_ok=True, response_type=ResponseTypes.OK)
         else:
@@ -44,6 +47,7 @@ class LogCollectorService(logcollector_pb2_grpc.LogCollectorServicer):
 
 
     def FinishSession(self, request: SessionFinishRequest, context) -> OperationResponse:
+        print(f'Finishing Session for {request.pid}')
         self.app.queues.finish.put(request.pid)
         self.app.event_generate('<<FinishSession>>')
         return OperationResponse(is_ok=True, response_type=ResponseTypes.OK)

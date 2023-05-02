@@ -16,9 +16,8 @@ class VisualCLRApp(tk.Tk):
     def __init__(self, *args, **kwargs):
         # init members
         self.processes = {}
-        self.processes[os.getpid()] = { 'pid': os.getpid(), 'cmd': 'dotnet run', 'path': os.environ['PATH'] }
-        self.active_pid = None
-        self.queues = SessionQueues(Queue(), Queue(1), Queue())
+        self.processes[0] = { 'pid': 0, 'cmd': 'debug', 'path': os.environ['PATH'] }
+        self.queues = SessionQueues(Queue(), Queue(1), Queue(), Queue())
         self.server = grpc.server(futures.ThreadPoolExecutor(max_workers=4))
 
         # init GUI
@@ -43,6 +42,7 @@ class VisualCLRApp(tk.Tk):
         self.bind('<<FinishActiveSession>>', self.finish_active_session)
         self.bind('<<PendingSession>>', self.append_session)
         self.bind('<<StartSession>>', self.start_session)
+        self.bind('<<AppendLog>>', self.append_log)
 
         # setup context
         # start collector
@@ -58,18 +58,17 @@ class VisualCLRApp(tk.Tk):
     def finish_session(self, event):
         if not self.queues.finish.empty():
             pid = self.queues.finish.get()
-            old_set = set(self.processes.keys())
-            del self.processes[pid]
-            new_set = set(self.processes.keys())
-            if old_set != new_set:
+            if pid == self.active_pid.get():
+                self.active_pid.set(0)
+                mb.showwarning('Connection lost',
+                               f'Disconnected from {pid}. All data now invalid')
+            if pid in self.processes:
+                del self.processes[pid]
                 self.frames[ConnectionFrame].event_generate('<<UpdateList>>')
-            if pid == self.active_pid:
-                self.active_pid = None
-                mb.showwarning('Connection lost', f'Disconnected from {pid}. All data now invalid')
 
 
     def finish_active_session(self, event):
-        self.queues.finish.put(self.active_pid)
+        self.queues.finish.put(self.active_pid.get())
         self.finish_session(event)
 
     def append_session(self, event):
@@ -89,7 +88,6 @@ class VisualCLRApp(tk.Tk):
     def start_session(self, event):
         if not self.queues.start.empty():
             data = self.queues.start.get()
-            self.active_pid = data['pid']
             self.show_frame(MonitorFrame)
             self.init_tabs(data)
 
@@ -99,3 +97,11 @@ class VisualCLRApp(tk.Tk):
         self.common.sdks.set(f"SDKs: {list_sdks(data['path'])}")
         self.common.rts.set(f"Runtimes: {list_runtimes(data['path'])}")
         self.common.cmd.set(f"CMD: {data['cmd']}")
+
+    def append_log(self, event):
+        while not self.queues.logs.empty():
+            log = self.queues.logs.get()
+            count = lambda txt: int(txt.index('end').split('.')[0]) - 1
+            if count(self.traces.logs) > 40:
+                self.traces.logs.delete('1.0', '1.0')
+            self.traces.logs.insert('end', log)

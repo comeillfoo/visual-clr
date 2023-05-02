@@ -16,17 +16,17 @@ class ConnectionFrame(tk.Frame):
         process_title = tk.Label(self, text='Процессы:')
         process_title.grid(row=1, column=0, columnspan=1)
 
-        process = tk.StringVar(self)
+        controller.active_pid = tk.IntVar(self)
 
-        processes = tk.OptionMenu(self, process, *(controller.processes.keys()))
+        processes = tk.OptionMenu(self, controller.active_pid, *(controller.processes.keys()))
         processes.grid(row=1, column=1, columnspan=3)
 
         # third layer: buttons
         btn_connect = tk.Button(self, text='Подключиться')
         def connect_cb(event):
-            print(f'Connecting to {process.get()}...')
+            print(f'Connecting to {controller.active_pid.get()}...')
             controller.queues.start \
-                .put(controller.processes[int(process.get())])
+                .put(controller.processes[controller.active_pid.get()])
             controller.event_generate('<<StartSession>>')
 
         btn_connect.bind('<Button-1>', connect_cb)
@@ -48,7 +48,7 @@ class ConnectionFrame(tk.Frame):
             pids = set(controller.processes.keys())
             processes['menu'].delete(0, 'end')
             for pid in pids:
-                processes['menu'].add_command(label=pid, command=tk._setit(process, pid))
+                processes['menu'].add_command(label=pid, command=tk._setit(controller.active_pid, pid))
 
         self.bind('<<UpdateList>>', update_cb)
 
@@ -125,9 +125,12 @@ class LogsFrame(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
 
+        self.logs = tk.Text(self, wrap=None, font='roboto 8')
+        self.logs.bind("<Key>", lambda e: "break")
+        self.logs.pack()
 
         self.text = 'Логи'
-        controller.taces = self
+        controller.traces = self
 
 
 class MetricsFrame(tk.Frame):
