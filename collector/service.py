@@ -1,20 +1,22 @@
 #!/usr/bin/env python3
 import logcollector_pb2_grpc
-from logcollector_pb2 import OperationResponse, TimestampRequest, ResponseTypes, SessionStartRequest, SessionFinishRequest
+from logcollector_pb2 import OperationResponse, TimestampRequest, TimestampIdRequest, ResponseTypes, SessionStartRequest, SessionFinishRequest
 
 
 class LogCollectorService(logcollector_pb2_grpc.LogCollectorServicer):
     def __init__(self, app):
         self.app = app
 
+    def _append_log(self, log: str):
+        print(log, end='')
+        self.app.queues.logs.put(log)
+        self.app.event_generate('<<AppendLog>>')
 
     def _class_stamp_stub(self, request: TimestampRequest, operation: str) -> OperationResponse:
         if request.pid != self.app.active_pid.get():
             return OperationResponse(is_ok=False, response_type=ResponseTypes.RESET)
         log = f'[{request.time}]: class {request.payload} {operation}\n'
-        print(log, end='')
-        self.app.queues.logs.put(log)
-        self.app.event_generate('<<AppendLog>>')
+        self._append_log(log)
         return OperationResponse(is_ok=True, response_type=ResponseTypes.OK)
 
 
@@ -51,6 +53,25 @@ class LogCollectorService(logcollector_pb2_grpc.LogCollectorServicer):
         self.app.queues.finish.put(request.pid)
         self.app.event_generate('<<FinishSession>>')
         return OperationResponse(is_ok=True, response_type=ResponseTypes.OK)
+
+    def _thread_stamp_stub(self, request: TimestampIdRequest, operation: str) -> OperationResponse:
+        if request.pid != self.app.active_pid.get():
+            return OperationResponse(is_ok=False, response_type=ResponseTypes.RESET)
+        log = f'[{request.time}] thread[{request.id}] {operation}\n'
+        self._append_log(log)
+        return OperationResponse(is_ok=True, response_type=ResponseTypes.OK)
+
+    def ThreadCreated(self, request, context):
+        return self._thread_stamp_stub(request, 'created')
+
+    def ThreadDestroyed(self, request, context):
+        return self._thread_stamp_stub(request, 'destroyed')
+
+    def ThreadResumed(self, request, context):
+        return self._thread_stamp_stub(request, 'resumed')
+
+    def ThreadSuspended(self, request, context):
+        return self._thread_stamp_stub(request, 'suspended')
 
 
 def serve(port, app):

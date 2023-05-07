@@ -13,6 +13,12 @@ message TimestampRequest {
     string payload = 3;
 }
 
+message TimestampIdRequest {
+    uint32 pid = 1;
+    double time = 2;
+    uint64 id = 3;
+}
+
 message OperationResponse {
     bool is_ok = 1;
     ResponseTypes response_type = 2;
@@ -39,6 +45,10 @@ service LogCollector {
     rpc ClassLoadFinishedStamp (TimestampRequest) returns (OperationResponse);
     rpc ClassUnloadStartStamp (TimestampRequest) returns (OperationResponse);
     rpc ClassUnloadFinishedStamp (TimestampRequest) returns (OperationResponse);
+    rpc ThreadCreated(TimestampIdRequest) returns (OperationResponse);
+    rpc ThreadDestroyed(TimestampIdRequest) returns (OperationResponse);
+    rpc ThreadResumed(TimestampIdRequest) returns (OperationResponse);
+    rpc ThreadSuspended(TimestampIdRequest) returns (OperationResponse);
     rpc StartSession (SessionStartRequest) returns (OperationResponse);
     rpc FinishSession (SessionFinishRequest) returns (OperationResponse);
 }
