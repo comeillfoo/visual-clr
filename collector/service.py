@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 import logcollector_pb2_grpc
 from logcollector_pb2 import OperationResponse, TimestampRequest, TimestampIdRequest, ResponseTypes, SessionStartRequest, SessionFinishRequest
+from datetime import datetime
 
 
 class LogCollectorService(logcollector_pb2_grpc.LogCollectorServicer):
     def __init__(self, app):
         self.app = app
 
-    def _append_log(self, log: str):
+    def _append_log(self, timestamp: float, payload: str):
+        t = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S.%f')
+        log = f'[{t}]: {payload}\n'
         print(log, end='')
         self.app.queues.logs.put(log)
         self.app.event_generate('<<AppendLog>>')
@@ -15,8 +18,7 @@ class LogCollectorService(logcollector_pb2_grpc.LogCollectorServicer):
     def _class_stamp_stub(self, request: TimestampRequest, operation: str) -> OperationResponse:
         if request.pid != self.app.active_pid.get():
             return OperationResponse(is_ok=False, response_type=ResponseTypes.RESET)
-        log = f'[{request.time}]: class {request.payload} {operation}\n'
-        self._append_log(log)
+        self._append_log(request.time, f'class {request.payload} {operation}')
         return OperationResponse(is_ok=True, response_type=ResponseTypes.OK)
 
 
@@ -57,8 +59,7 @@ class LogCollectorService(logcollector_pb2_grpc.LogCollectorServicer):
     def _thread_stamp_stub(self, request: TimestampIdRequest, operation: str) -> OperationResponse:
         if request.pid != self.app.active_pid.get():
             return OperationResponse(is_ok=False, response_type=ResponseTypes.RESET)
-        log = f'[{request.time}] thread[{request.id}] {operation}\n'
-        self._append_log(log)
+        self._append_log(request.time, f'thread[{request.id}] {operation}')
         return OperationResponse(is_ok=True, response_type=ResponseTypes.OK)
 
     def ThreadCreated(self, request, context):
