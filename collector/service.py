@@ -2,6 +2,7 @@
 import logcollector_pb2_grpc
 from logcollector_pb2 import OperationResponse, TimestampRequest, TimestampIdRequest, ResponseTypes, SessionStartRequest, SessionFinishRequest
 from datetime import datetime
+from enums import ThreadStates
 
 
 class LogCollectorService(logcollector_pb2_grpc.LogCollectorServicer):
@@ -56,23 +57,27 @@ class LogCollectorService(logcollector_pb2_grpc.LogCollectorServicer):
         self.app.event_generate('<<FinishSession>>')
         return OperationResponse(is_ok=True, response_type=ResponseTypes.OK)
 
-    def _thread_stamp_stub(self, request: TimestampIdRequest, operation: str) -> OperationResponse:
+    def _thread_stamp_stub(self, request: TimestampIdRequest, operation: ThreadStates) -> OperationResponse:
         if request.pid != self.app.active_pid.get():
             return OperationResponse(is_ok=False, response_type=ResponseTypes.RESET)
+
+        self.app.queues.threads.put((request, operation))
+        self.app.event_generate('<<UpdateThreads>>')
+
         self._append_log(request.time, f'thread[{request.id}] {operation}')
         return OperationResponse(is_ok=True, response_type=ResponseTypes.OK)
 
-    def ThreadCreated(self, request, context):
-        return self._thread_stamp_stub(request, 'created')
+    def ThreadCreated(self, request: TimestampIdRequest, context) -> OperationResponse:
+        return self._thread_stamp_stub(request, ThreadStates.CREATED)
 
-    def ThreadDestroyed(self, request, context):
-        return self._thread_stamp_stub(request, 'destroyed')
+    def ThreadDestroyed(self, request: TimestampIdRequest, context) -> OperationResponse:
+        return self._thread_stamp_stub(request, ThreadStates.DESTROYED)
 
-    def ThreadResumed(self, request, context):
-        return self._thread_stamp_stub(request, 'resumed')
+    def ThreadResumed(self, request: TimestampIdRequest, context) -> OperationResponse:
+        return self._thread_stamp_stub(request, ThreadStates.RESUMED)
 
-    def ThreadSuspended(self, request, context):
-        return self._thread_stamp_stub(request, 'suspended')
+    def ThreadSuspended(self, request: TimestampIdRequest, context) -> OperationResponse:
+        return self._thread_stamp_stub(request, ThreadStates.SUSPENDED)
 
 
 def serve(port, app):

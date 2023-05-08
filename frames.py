@@ -3,6 +3,7 @@ import tkinter as tk
 from tkinter import ttk
 import platform as plt
 import sys
+from collector.graph import refresh
 
 
 class ConnectionFrame(tk.Frame):
@@ -137,6 +138,16 @@ class MetricsFrame(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
 
+        UPDATE_TIMEOUT=1000
+        VALUES_LIMIT = 11
+
+        # threads number
+        threads = tk.Frame(self)
+        self.threads = [0] * VALUES_LIMIT
+        self.thread = tk.IntVar(threads, 0)
+        threads.after(UPDATE_TIMEOUT,
+            lambda: refresh(threads, self.threads, self.thread, 'Число потоков', VALUES_LIMIT, UPDATE_TIMEOUT))
+        threads.pack()
 
         self.text = 'Метрики'
         controller.metrics = self
@@ -148,4 +159,4 @@ class ObjectsFrame(tk.Frame):
 
 
         self.text = 'Объекты'
-        controller.metrics = self
+        controller.objects = self

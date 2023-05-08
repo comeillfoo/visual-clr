@@ -11,13 +11,15 @@ from queue import Queue
 import os
 from tkinter import messagebox as mb
 from commands import list_sdks, list_runtimes
+from enums import ThreadStates
+
 
 class VisualCLRApp(tk.Tk):
     def __init__(self, *args, **kwargs):
         # init members
         self.processes = {}
         self.processes[0] = { 'pid': 0, 'cmd': 'debug', 'path': os.environ['PATH'] }
-        self.queues = SessionQueues(Queue(), Queue(1), Queue(), Queue())
+        self.queues = SessionQueues(Queue(), Queue(1), Queue(), Queue(), Queue())
         self.server = grpc.server(futures.ThreadPoolExecutor(max_workers=4))
 
         # init GUI
@@ -43,6 +45,7 @@ class VisualCLRApp(tk.Tk):
         self.bind('<<PendingSession>>', self.append_session)
         self.bind('<<StartSession>>', self.start_session)
         self.bind('<<AppendLog>>', self.append_log)
+        self.bind('<<UpdateThreads>>', self.update_threads)
 
         # setup context
         # start collector
@@ -103,5 +106,13 @@ class VisualCLRApp(tk.Tk):
             log = self.queues.logs.get()
             count = lambda txt: int(txt.index('end').split('.')[0]) - 1
             if count(self.traces.logs) > 40:
-                self.traces.logs.delete('1.0', '1.0')
+                self.traces.logs.delete('1.0', '2.0')
             self.traces.logs.insert('end', log)
+
+    def update_threads(self, event):
+        if not self.queues.threads.empty():
+            request, op = self.queues.threads.get()
+            # update counter
+            if op == ThreadStates.CREATED or op == ThreadStates.DESTROYED:
+                prev = self.metrics.thread.get()
+                self.metrics.thread.set(prev + (+1 if op == ThreadStates.CREATED else -1))
