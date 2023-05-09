@@ -66,6 +66,7 @@ class MonitorFrame(tk.Frame):
             LogsFrame(tabsystem, controller),
             MetricsFrame(tabsystem, controller),
             ObjectsFrame(tabsystem, controller),
+            ThreadsFrame(tabsystem, controller),
         ]
 
         for tab in tabs:
@@ -147,7 +148,7 @@ class MetricsFrame(tk.Frame):
         self.thread = tk.IntVar(threads, 0)
         threads.after(UPDATE_TIMEOUT,
             lambda: refresh(threads, self.threads, self.thread, 'Число потоков', VALUES_LIMIT, UPDATE_TIMEOUT))
-        threads.pack()
+        threads.grid(row=0, column=0)
 
         # cpu usage
         cpu = tk.Frame(self)
@@ -155,7 +156,22 @@ class MetricsFrame(tk.Frame):
         self.cpu = tk.StringVar(cpu, '0.0')
         cpu.after(UPDATE_TIMEOUT,
             lambda: refresh(cpu, self.cpus, self.cpu, 'CPU, %', VALUES_LIMIT, UPDATE_TIMEOUT))
-        cpu.pack()
+        cpu.grid(row=0, column=1)
+
+        # io usage
+        io_read = tk.Frame(self)
+        self.reads = [0.0] * VALUES_LIMIT
+        self.read_kbytes = tk.StringVar(io_read, '0.0')
+        io_read.after(UPDATE_TIMEOUT,
+            lambda: refresh(io_read, self.reads, self.read_kbytes, 'Прочитано, Кб', VALUES_LIMIT, UPDATE_TIMEOUT, difference=True))
+        io_read.grid(row=1, column=0)
+
+        io_write = tk.Frame(self)
+        self.writes = [0.0] * VALUES_LIMIT
+        self.write_kbytes = tk.StringVar(io_write, '0.0')
+        io_write.after(UPDATE_TIMEOUT,
+            lambda: refresh(io_write, self.writes, self.write_kbytes, 'Записано, Кб', VALUES_LIMIT, UPDATE_TIMEOUT, difference=True))
+        io_write.grid(row=1, column=1)
 
         self.text = 'Метрики'
         controller.metrics = self
@@ -168,3 +184,12 @@ class ObjectsFrame(tk.Frame):
 
         self.text = 'Объекты'
         controller.objects = self
+
+
+class ThreadsFrame(tk.Frame):
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
+
+
+        self.text = 'Потоки'
+        controller.threads = self

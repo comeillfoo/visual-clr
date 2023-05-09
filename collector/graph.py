@@ -18,9 +18,12 @@ def _plot_graph(target: tk.Frame, x: list, y: list, title: str):
         slave.destroy()
 
 
-def refresh(master: tk.Frame, values: list, value, title: str, limit: int = 10, timeout: int = 0):
+def refresh(master: tk.Frame, values: list, value, title: str, limit: int = 10, timeout: int = 0, difference: bool = False):
     values.pop(0)
-    values.append(float(value.get()))
+    next_value = float(value.get())
+    if difference:
+        next_value -= values[-1]
+    values.append(next_value)
     _plot_graph(master, list(range(limit)), values, title)
     if timeout > 0:
         master.after(timeout, lambda: refresh(master, values, value, title, limit, timeout))

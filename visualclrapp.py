@@ -122,3 +122,5 @@ class VisualCLRApp(tk.Tk):
         if not self.queues.stats.empty():
             request = self.queues.stats.get()
             self.metrics.cpu.set(str(request.cpu))
+            self.metrics.read_kbytes.set(str(request.read_bytes / 1024))
+            self.metrics.write_kbytes.set(str(request.write_bytes / 1024))
