@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import logcollector_pb2_grpc
-from logcollector_pb2 import OperationResponse, TimestampRequest, TimestampIdRequest, ResponseTypes, SessionStartRequest, SessionFinishRequest
+from logcollector_pb2 import OperationResponse, TimestampRequest, TimestampIdRequest, ResponseTypes, SessionStartRequest, SessionFinishRequest, CommonStatisticsRequest
 from datetime import datetime
 from enums import ThreadStates
 
@@ -55,6 +55,14 @@ class LogCollectorService(logcollector_pb2_grpc.LogCollectorServicer):
         print(f'Finishing Session for {request.pid}')
         self.app.queues.finish.put(request.pid)
         self.app.event_generate('<<FinishSession>>')
+        return OperationResponse(is_ok=True, response_type=ResponseTypes.OK)
+
+    def Stat(self, request: CommonStatisticsRequest, context) -> OperationResponse:
+        if request.pid != self.app.active_pid.get():
+            return OperationResponse(is_ok=False, response_type=ResponseTypes.RESET)
+        self.app.queues.stats.put(request)
+        self.app.event_generate('<<UpdateStats>>')
+        self._append_log(request.time, f'CPU: {request.cpu:.2f}%; IO: {request.read_bytes}/{request.write_bytes}')
         return OperationResponse(is_ok=True, response_type=ResponseTypes.OK)
 
     def _thread_stamp_stub(self, request: TimestampIdRequest, operation: ThreadStates) -> OperationResponse:

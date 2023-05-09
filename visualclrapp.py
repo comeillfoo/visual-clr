@@ -19,7 +19,7 @@ class VisualCLRApp(tk.Tk):
         # init members
         self.processes = {}
         self.processes[0] = { 'pid': 0, 'cmd': 'debug', 'path': os.environ['PATH'] }
-        self.queues = SessionQueues(Queue(), Queue(1), Queue(), Queue(), Queue())
+        self.queues = SessionQueues(Queue(), Queue(1), Queue(), Queue(), Queue(), Queue())
         self.server = grpc.server(futures.ThreadPoolExecutor(max_workers=4))
 
         # init GUI
@@ -46,6 +46,7 @@ class VisualCLRApp(tk.Tk):
         self.bind('<<StartSession>>', self.start_session)
         self.bind('<<AppendLog>>', self.append_log)
         self.bind('<<UpdateThreads>>', self.update_threads)
+        self.bind('<<UpdateStats>>', self.update_stats)
 
         # setup context
         # start collector
@@ -116,3 +117,8 @@ class VisualCLRApp(tk.Tk):
             if op == ThreadStates.CREATED or op == ThreadStates.DESTROYED:
                 prev = self.metrics.thread.get()
                 self.metrics.thread.set(prev + (+1 if op == ThreadStates.CREATED else -1))
+
+    def update_stats(self, event):
+        if not self.queues.stats.empty():
+            request = self.queues.stats.get()
+            self.metrics.cpu.set(str(request.cpu))

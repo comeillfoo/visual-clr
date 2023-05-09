@@ -149,6 +149,14 @@ class MetricsFrame(tk.Frame):
             lambda: refresh(threads, self.threads, self.thread, 'Число потоков', VALUES_LIMIT, UPDATE_TIMEOUT))
         threads.pack()
 
+        # cpu usage
+        cpu = tk.Frame(self)
+        self.cpus = [0.0] * VALUES_LIMIT
+        self.cpu = tk.StringVar(cpu, '0.0')
+        cpu.after(UPDATE_TIMEOUT,
+            lambda: refresh(cpu, self.cpus, self.cpu, 'CPU, %', VALUES_LIMIT, UPDATE_TIMEOUT))
+        cpu.pack()
+
         self.text = 'Метрики'
         controller.metrics = self
 

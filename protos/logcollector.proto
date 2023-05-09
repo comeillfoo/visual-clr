@@ -19,6 +19,14 @@ message TimestampIdRequest {
     uint64 id = 3;
 }
 
+message CommonStatisticsRequest {
+    uint32 pid = 1;
+    double time = 2;
+    double cpu = 3;
+    uint64 read_bytes = 4;
+    uint64 write_bytes = 5;
+}
+
 message OperationResponse {
     bool is_ok = 1;
     ResponseTypes response_type = 2;
@@ -51,5 +59,6 @@ service LogCollector {
     rpc ThreadSuspended(TimestampIdRequest) returns (OperationResponse);
     rpc StartSession (SessionStartRequest) returns (OperationResponse);
     rpc FinishSession (SessionFinishRequest) returns (OperationResponse);
+    rpc Stat(CommonStatisticsRequest) returns (OperationResponse);
 }
 
