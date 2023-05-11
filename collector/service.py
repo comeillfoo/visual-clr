@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import logcollector_pb2_grpc
-from logcollector_pb2 import OperationResponse, TimestampRequest, TimestampIdRequest, ResponseTypes, SessionStartRequest, SessionFinishRequest, CommonStatisticsRequest
+from logcollector_pb2 import OperationResponse, TimestampRequest, TimestampIdRequest, ResponseTypes, SessionStartRequest, SessionFinishRequest
 from datetime import datetime
 from enums import ThreadStates
 
@@ -8,6 +8,11 @@ from enums import ThreadStates
 class LogCollectorService(logcollector_pb2_grpc.LogCollectorServicer):
     def __init__(self, app):
         self.app = app
+
+    def _update_stats(self, request):
+        self.app.queues.stats.put(request.stats)
+        self.app.event_generate('<<UpdateStats>>')
+        # self._append_log(request.time, f'CPU: {request.stats.cpu:.2f}%; IO: {request.stats.read_bytes}/{request.stats.write_bytes}')
 
     def _append_log(self, timestamp: float, payload: str):
         t = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S.%f')
@@ -20,6 +25,7 @@ class LogCollectorService(logcollector_pb2_grpc.LogCollectorServicer):
         if request.pid != self.app.active_pid.get():
             return OperationResponse(is_ok=False, response_type=ResponseTypes.RESET)
         self._append_log(request.time, f'class {request.payload} {operation}')
+        self._update_stats(request)
         return OperationResponse(is_ok=True, response_type=ResponseTypes.OK)
 
 
@@ -57,14 +63,6 @@ class LogCollectorService(logcollector_pb2_grpc.LogCollectorServicer):
         self.app.event_generate('<<FinishSession>>')
         return OperationResponse(is_ok=True, response_type=ResponseTypes.OK)
 
-    def Stat(self, request: CommonStatisticsRequest, context) -> OperationResponse:
-        if request.pid != self.app.active_pid.get():
-            return OperationResponse(is_ok=False, response_type=ResponseTypes.RESET)
-        self.app.queues.stats.put(request)
-        self.app.event_generate('<<UpdateStats>>')
-        self._append_log(request.time, f'CPU: {request.cpu:.2f}%; IO: {request.read_bytes}/{request.write_bytes}')
-        return OperationResponse(is_ok=True, response_type=ResponseTypes.OK)
-
     def _thread_stamp_stub(self, request: TimestampIdRequest, operation: ThreadStates) -> OperationResponse:
         if request.pid != self.app.active_pid.get():
             return OperationResponse(is_ok=False, response_type=ResponseTypes.RESET)
@@ -73,6 +71,7 @@ class LogCollectorService(logcollector_pb2_grpc.LogCollectorServicer):
         self.app.event_generate('<<UpdateThreads>>')
 
         self._append_log(request.time, f'thread[{request.id}] {operation}')
+        self._update_stats(request)
         return OperationResponse(is_ok=True, response_type=ResponseTypes.OK)
 
     def ThreadCreated(self, request: TimestampIdRequest, context) -> OperationResponse:
@@ -86,6 +85,14 @@ class LogCollectorService(logcollector_pb2_grpc.LogCollectorServicer):
 
     def ThreadSuspended(self, request: TimestampIdRequest, context) -> OperationResponse:
         return self._thread_stamp_stub(request, ThreadStates.SUSPENDED)
+
+    def ExceptionThrown(self, request: TimestampRequest, context) -> OperationResponse:
+        if request.pid != self.app.active_pid.get():
+            return OperationResponse(is_ok=False, response_type=ResponseTypes.RESET)
+
+        self._append_log(request.time, f'{request.payload} thrown')
+        self._update_stats(request)
+        return OperationResponse(is_ok=True, response_type=ResponseTypes.OK)
 
 
 def serve(port, app):

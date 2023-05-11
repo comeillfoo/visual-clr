@@ -7,24 +7,24 @@ enum ResponseTypes {
     RESET = 2;
 }
 
+message CommonStatistics {
+    double cpu = 3;
+    uint64 read_bytes = 4;
+    uint64 write_bytes = 5;
+}
+
 message TimestampRequest {
     uint32 pid = 1;
     double time = 2;
     string payload = 3;
+    CommonStatistics stats = 4;
 }
 
 message TimestampIdRequest {
     uint32 pid = 1;
     double time = 2;
     uint64 id = 3;
-}
-
-message CommonStatisticsRequest {
-    uint32 pid = 1;
-    double time = 2;
-    double cpu = 3;
-    uint64 read_bytes = 4;
-    uint64 write_bytes = 5;
+    CommonStatistics stats = 4;
 }
 
 message OperationResponse {
@@ -57,8 +57,8 @@ service LogCollector {
     rpc ThreadDestroyed(TimestampIdRequest) returns (OperationResponse);
     rpc ThreadResumed(TimestampIdRequest) returns (OperationResponse);
     rpc ThreadSuspended(TimestampIdRequest) returns (OperationResponse);
+    rpc ExceptionThrown(TimestampRequest) returns (OperationResponse);
     rpc StartSession (SessionStartRequest) returns (OperationResponse);
     rpc FinishSession (SessionFinishRequest) returns (OperationResponse);
-    rpc Stat(CommonStatisticsRequest) returns (OperationResponse);
 }
 
