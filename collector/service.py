@@ -94,6 +94,21 @@ class LogCollectorService(logcollector_pb2_grpc.LogCollectorServicer):
         self._update_stats(request)
         return OperationResponse(is_ok=True, response_type=ResponseTypes.OK)
 
+    def _jit_compilation_stub(self, request: TimestampRequest, op: str) -> OperationResponse:
+        if request.pid != self.app.active_pid.get():
+            return OperationResponse(is_ok=False, response_type=ResponseTypes.RESET)
+
+        self._append_log(request.time, f'jit-compilation {request.payload} {op}')
+        self._update_stats(request)
+        return OperationResponse(is_ok=True, response_type=ResponseTypes.OK)
+
+    def JitCompilationStartStamp(self, request: TimestampRequest, context) -> OperationResponse:
+        return self._jit_compilation_stub(request, 'started')
+
+    def JitCompilationFinishedStamp(self, request: TimestampRequest, context) -> OperationResponse:
+        return self._jit_compilation_stub(request, 'finished')
+
+
 
 def serve(port, app):
     logcollector_pb2_grpc.add_LogCollectorServicer_to_server(LogCollectorService(app), app.server)

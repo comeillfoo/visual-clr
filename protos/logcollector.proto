@@ -53,6 +53,8 @@ service LogCollector {
     rpc ClassLoadFinishedStamp (TimestampRequest) returns (OperationResponse);
     rpc ClassUnloadStartStamp (TimestampRequest) returns (OperationResponse);
     rpc ClassUnloadFinishedStamp (TimestampRequest) returns (OperationResponse);
+    rpc JitCompilationStartStamp (TimestampRequest) returns (OperationResponse);
+    rpc JitCompilationFinishedStamp (TimestampRequest) returns (OperationResponse);
     rpc ThreadCreated(TimestampIdRequest) returns (OperationResponse);
     rpc ThreadDestroyed(TimestampIdRequest) returns (OperationResponse);
     rpc ThreadResumed(TimestampIdRequest) returns (OperationResponse);
