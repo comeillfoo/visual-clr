@@ -49,6 +49,7 @@ class VisualCLRApp(tk.Tk):
         self.bind('<<AppendLog>>', self.append_log)
         self.bind('<<UpdateThreads>>', self.update_threads)
         self.bind('<<UpdateStats>>', self.update_stats)
+        self.bind('<<IncrementExceptions>>', self.increment_exceptions)
 
         # setup context
         # start collector
@@ -143,3 +144,7 @@ class VisualCLRApp(tk.Tk):
             self.metrics.cpu.set(str(request.cpu))
             self.metrics.read_kbytes.set(str(request.read_bytes / 1024))
             self.metrics.write_kbytes.set(str(request.write_bytes / 1024))
+
+    def increment_exceptions(self, event):
+        prev = self.metrics.exception.get()
+        self.metrics.exception.set(prev + 1)

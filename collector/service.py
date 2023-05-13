@@ -89,6 +89,7 @@ class LogCollectorService(logcollector_pb2_grpc.LogCollectorServicer):
         if request.pid != self.app.active_pid.get():
             return OperationResponse(is_ok=False, response_type=ResponseTypes.RESET)
 
+        self.app.event_generate('<<IncrementExceptions>>')
         self._append_log(request.time, f'{request.payload} thrown')
         self._update_stats(request)
         return OperationResponse(is_ok=True, response_type=ResponseTypes.OK)
