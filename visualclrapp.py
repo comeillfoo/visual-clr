@@ -4,7 +4,7 @@ import grpc
 import tkinter as tk
 from frames import ConnectionFrame, MonitorFrame
 from collector.service import serve
-from collector.context import SessionQueues
+from utility import SessionQueues
 from safe_structs import SafeSet
 from threading import Thread
 from queue import Queue
@@ -12,6 +12,7 @@ import os
 from tkinter import messagebox as mb
 from commands import list_sdks, list_runtimes
 from enums import ThreadStates
+from utility import unix2str
 
 
 class VisualCLRApp(tk.Tk):
@@ -21,6 +22,7 @@ class VisualCLRApp(tk.Tk):
         self.processes[0] = { 'pid': 0, 'cmd': 'debug', 'path': os.environ['PATH'] }
         self.queues = SessionQueues(Queue(), Queue(1), Queue(), Queue(), Queue(), Queue())
         self.server = grpc.server(futures.ThreadPoolExecutor(max_workers=4))
+        self.threads_data = {}
 
         # init GUI
         tk.Tk.__init__(self, *args, **kwargs)
@@ -117,6 +119,23 @@ class VisualCLRApp(tk.Tk):
             if op == ThreadStates.CREATED or op == ThreadStates.DESTROYED:
                 prev = self.metrics.thread.get()
                 self.metrics.thread.set(prev + (+1 if op == ThreadStates.CREATED else -1))
+
+            # update threads_data
+            if op == ThreadStates.CREATED:
+                self.threads_data[request.id] = {
+                    'state': 'готовность',
+                    'created': unix2str(request.time),
+                    'destroyed': 'еще не завершен'
+                }
+                self.threads.listv.set(list(self.threads_data.keys()))
+            if op == ThreadStates.DESTROYED:
+                self.threads_data[request.id]['state'] = 'завершен'
+                self.threads_data[request.id]['destroyed'] = unix2str(request.time)
+                self.threads.listv.set(list(self.threads_data.keys()))
+            if op == ThreadStates.RESUMED:
+                self.threads_data[request.id]['state'] = 'выполняемый'
+            if op == ThreadStates.SUSPENDED:
+                self.threads_data[request.id]['state'] = 'ожидает'
 
     def update_stats(self, event):
         if not self.queues.stats.empty():

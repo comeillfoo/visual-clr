@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import logcollector_pb2_grpc
 from logcollector_pb2 import OperationResponse, TimestampRequest, TimestampIdRequest, ResponseTypes, SessionStartRequest, SessionFinishRequest
-from datetime import datetime
+from utility import unix2str
 from enums import ThreadStates
 
 
@@ -15,8 +15,7 @@ class LogCollectorService(logcollector_pb2_grpc.LogCollectorServicer):
         # self._append_log(request.time, f'CPU: {request.stats.cpu:.2f}%; IO: {request.stats.read_bytes}/{request.stats.write_bytes}')
 
     def _append_log(self, timestamp: float, payload: str):
-        t = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S.%f')
-        log = f'[{t}]: {payload}\n'
+        log = f'[{unix2str(timestamp)}]: {payload}\n'
         print(log, end='')
         self.app.queues.logs.put(log)
         self.app.event_generate('<<AppendLog>>')

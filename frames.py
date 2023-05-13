@@ -190,6 +190,53 @@ class ThreadsFrame(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
 
+        # thread info
+        thread_info = tk.Frame(self, highlightthickness=10)
+        info_headers = {
+            'pid': 'PID:',
+            'state': 'Состояние:',
+            'created': 'Создан:',
+            'destroyed': 'Завершен:'
+        }
+        pid = tk.StringVar(thread_info, f'{info_headers["pid"]} ?')
+        pid_w = tk.Label(thread_info, textvariable=pid)
+        pid_w.grid(row=0, column=0, sticky='w')
+        state = tk.StringVar(thread_info, f'{info_headers["state"]} ?')
+        state_w = tk.Label(thread_info, textvariable=state)
+        state_w.grid(row=1, column=0, sticky='w')
+        created = tk.StringVar(thread_info, f'{info_headers["created"]} ?')
+        created_w = tk.Label(thread_info, textvariable=created)
+        created_w.grid(row=2, column=0, sticky='w')
+        destroyed = tk.StringVar(thread_info, f'{info_headers["destroyed"]} ?')
+        destroyed_w = tk.Label(thread_info, textvariable=destroyed)
+        destroyed_w.grid(row=3, column=0, sticky='w')
+
+        thread_info.pack(side=tk.RIGHT, fill=tk.BOTH, expand=1)
+
+        # threads list
+        thread_selector = tk.Frame(self)
+        self.listv = tk.Variable(thread_selector, value=[])
+        thread_listbox = tk.Listbox(thread_selector, listvariable=self.listv, selectmode=tk.SINGLE)
+        thread_listbox.pack(side=tk.LEFT, fill=tk.BOTH)
+        threads_scroller = tk.Scrollbar(thread_selector, command=thread_listbox.yview)
+        threads_scroller.pack(side=tk.RIGHT, fill=tk.Y)
+        thread_listbox.config(yscrollcommand=threads_scroller.set)
+        thread_selector.pack(side=tk.LEFT, fill=tk.BOTH)
+
+        def thread_select(event):
+            thread_listbox = event.widget
+            selection = thread_listbox.curselection()
+            if not selection:
+                return
+            index = int(selection[0])
+            thread_id = thread_listbox.get(index)
+            pid.set(f'{info_headers["pid"]} {thread_id}')
+
+            thread = controller.threads_data[thread_id]
+            state.set(f'{info_headers["state"]} {thread["state"]}')
+            created.set(f'{info_headers["created"]} {thread["created"]}')
+            destroyed.set(f'{info_headers["destroyed"]} {thread["destroyed"]}')
+        thread_listbox.bind('<<ListboxSelect>>', thread_select)
 
         self.text = 'Потоки'
         controller.threads = self
