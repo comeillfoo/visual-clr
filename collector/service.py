@@ -116,7 +116,7 @@ class LogCollectorService(logcollector_pb2_grpc.LogCollectorServicer):
 
         self.app.queues.allocations.put(request)
         self.app.event_generate('<<AllocateObject>>')
-        self._append_log(request.time, f'{request.class_name}[{request.object_size}] {request.object_gen.generation}')
+        self._append_log(request.time, f'{request.class_name}[{request.size}] {request.object_gen.generation.value}')
         self._update_stats(request)
         return OperationResponse(is_ok=True, response_type=ResponseTypes.OK)
 
@@ -124,6 +124,8 @@ class LogCollectorService(logcollector_pb2_grpc.LogCollectorServicer):
         if request.pid != self.app.active_pid.get():
             return OperationResponse(is_ok=False, response_type=ResponseTypes.RESET)
 
+        self.app.queues.objects.put(request)
+        self.app.event_generate('<<UpdateObjects>>')
         self._append_log(request.time, f'GC collection finished')
         self._update_stats(request)
         return OperationResponse(is_ok=True, response_type=ResponseTypes.OK)

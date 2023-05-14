@@ -27,17 +27,21 @@ message TimestampIdRequest {
     CommonStatistics stats = 4;
 }
 
-message ObjectWithGeneration {
-    uint64 object_id = 1;
-    bool has_generation = 2; // 'cause rust's tonic optional is experimental
-    uint32 generation = 3;
+message OptionUint32 {
+    bool is_valid = 1;
+    uint32 value = 2;
+}
+
+message ObjectGeneration {
+    uint64 id = 1;
+    OptionUint32 generation = 2; // 'cause rust's tonic optional is experimental
 }
 
 message ObjectAllocatedStampRequest {
     uint32 pid = 1;
     double time = 2;
-    ObjectWithGeneration object_gen = 3;
-    uint64 object_size = 4;
+    ObjectGeneration object_gen = 3;
+    uint64 size = 4;
     string class_name = 5;
     CommonStatistics stats = 6;
 }
@@ -45,7 +49,7 @@ message ObjectAllocatedStampRequest {
 message UpdateGenerationsRequest {
     uint32 pid = 1;
     double time = 2;
-    repeated ObjectWithGeneration objects = 3;
+    repeated ObjectGeneration objects = 3;
 }
 
 message OperationResponse {

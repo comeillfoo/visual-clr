@@ -5,4 +5,6 @@ from datetime import datetime
 def unix2str(timestamp: float) -> str:
     return datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S.%f')
 
-SessionQueues = namedtuple('SessionQueues', ['pending', 'start', 'finish', 'logs', 'threads', 'stats', 'allocations'])
+SessionQueues = namedtuple('SessionQueues', ['pending', 'start', 'finish', 'logs', 'threads', 'stats', 'allocations', 'objects'])
+
+ManagedObject = namedtuple('ManagedObject', ['class_name', 'size', 'generation', 'created', 'disposed'])

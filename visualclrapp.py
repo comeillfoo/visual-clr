@@ -4,15 +4,21 @@ import grpc
 import tkinter as tk
 from frames import ConnectionFrame, MonitorFrame
 from collector.service import serve
-from utility import SessionQueues
+from utility import SessionQueues, ManagedObject, unix2str
 from safe_structs import SafeSet
 from threading import Thread
 from queue import Queue
 import os
 from tkinter import messagebox as mb
 from commands import list_sdks, list_runtimes
-from enums import ThreadStates
-from utility import unix2str
+from enums import ThreadStates, GcGenerations
+
+_kb_unboxer = lambda v: float(v) * 1024
+_kb_boxer = lambda v: str(v / 1024)
+
+def _fold_variable(variable, inc, unboxer = lambda v: v, boxer = lambda v: v):
+    prev = unboxer(variable.get())
+    variable.set(boxer(prev + inc))
 
 
 class VisualCLRApp(tk.Tk):
@@ -20,10 +26,11 @@ class VisualCLRApp(tk.Tk):
         # init members
         self.processes = {}
         self.processes[0] = { 'pid': 0, 'cmd': 'debug', 'path': os.environ['PATH'] }
-        self.queues = SessionQueues(Queue(), Queue(1), Queue(), \
+        self.queues = SessionQueues(Queue(), Queue(1), Queue(), Queue(), \
                                     Queue(), Queue(), Queue(), Queue())
         self.server = grpc.server(futures.ThreadPoolExecutor(max_workers=4))
         self.threads_data = {}
+        self.objects_data = {}
 
         # init GUI
         tk.Tk.__init__(self, *args, **kwargs)
@@ -52,8 +59,8 @@ class VisualCLRApp(tk.Tk):
         self.bind('<<UpdateStats>>', self.update_stats)
         self.bind('<<IncrementExceptions>>', self.increment_exceptions)
         self.bind('<<AllocateObject>>', self.allocate_object)
+        self.bind('<<UpdateObjects>>', self.update_objects)
 
-        # setup context
         # start collector
         self.collector = Thread(target=serve, args=(50051, self))
         self.collector.start()
@@ -120,15 +127,16 @@ class VisualCLRApp(tk.Tk):
             request, op = self.queues.threads.get()
             # update counter
             if op == ThreadStates.CREATED or op == ThreadStates.DESTROYED:
-                prev = self.metrics.thread.get()
-                self.metrics.thread.set(prev + (+1 if op == ThreadStates.CREATED else -1))
+                # prev = self.metrics.thread.get()
+                # self.metrics.thread.set(prev + (+1 if op == ThreadStates.CREATED else -1))
+                _fold_variable(self.metrics.thread, (+1 if op == ThreadStates.CREATED else -1))
 
             # update threads_data
             if op == ThreadStates.CREATED:
                 self.threads_data[request.id] = {
                     'state': 'готовность',
                     'created': unix2str(request.time),
-                    'destroyed': 'еще не завершен'
+                    'destroyed': ''
                 }
                 self.threads.listv.set(list(self.threads_data.keys()))
             if op == ThreadStates.DESTROYED:
@@ -148,12 +156,62 @@ class VisualCLRApp(tk.Tk):
             self.metrics.write_kbytes.set(str(request.write_bytes / 1024))
 
     def increment_exceptions(self, event):
-        prev = self.metrics.exception.get()
-        self.metrics.exception.set(prev + 1)
+        _fold_variable(self.metrics.exception, 1)
+        # prev = self.metrics.exception.get()
+        # self.metrics.exception.set(prev + 1)
+
+    def _update_generation(self, g: GcGenerations, size: float):
+        if GcGenerations.UNDEFINED != g:
+            if GcGenerations.GEN0 == g:
+                genvar = self.gc.current_gen0
+            elif GcGenerations.GEN1 == g:
+                genvar = self.gc.current_gen1
+            elif GcGenerations.GEN2 == g:
+                genvar = self.gc.current_gen2
+            elif GcGenerations.LARGE_OBJECT_HEAP == g:
+                genvar = self.gc.current_loh
+            elif GcGenerations.PINNED_OBJECT_HEAP == g:
+                genvar = self.gc.current_poh
+            else:
+                return
+            _fold_variable(genvar, size,
+                        _kb_unboxer, _kb_boxer)
 
     def allocate_object(self, event):
         if not self.queues.allocations.empty():
             request = self.queues.allocations.get()
-            prev = float(self.metrics.memory.get()) * 1024
-            self.metrics.memory.set(str((prev + request.object_size) / 1024))
+            # update memory usage
+            # prev = float(self.metrics.memory.get()) * 1024
+            # self.metrics.memory.set(str((prev + request.size) / 1024))
+            _fold_variable(self.metrics.memory, request.size,
+                        _kb_unboxer, _kb_boxer)
+
+            id = request.object_gen.id
+            g = request.object_gen.generation.value
+            # save object
+            self.objects_data[id] = ManagedObject(
+                request.class_name,
+                request.size,
+                GcGenerations.from_value(g),
+                unix2str(request.time),
+                ''
+            )
+            # update gc gen
+            self._update_generation(self.objects_data[id].generation, +request.size)
+
+    def update_objects(self, event):
+        if not self.queues.objects.empty():
+            request = self.queues.objects.get()
+
+            for object in request.objects:
+                object_data = self.objects_data[object.id]
+                self._update_generation(object_data.generation, -object_data.size)
+                if object.generation.is_valid:
+                    # update gc gens
+                    object_data.generation = GcGenerations.from_value(object.generation.value)
+                    self._update_generation(object_data.generation, +object_data.size)
+                else:
+                    # disposed
+                    object_data.disposed = unix2str(request.time)
+
 
