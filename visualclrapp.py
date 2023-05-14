@@ -60,6 +60,8 @@ class VisualCLRApp(tk.Tk):
         self.bind('<<IncrementExceptions>>', self.increment_exceptions)
         self.bind('<<AllocateObject>>', self.allocate_object)
         self.bind('<<UpdateObjects>>', self.update_objects)
+        self.bind('<<ClassLoaded>>', self.class_loaded)
+        self.bind('<<ClassUnloaded>>', self.class_unloaded)
 
         # start collector
         self.collector = Thread(target=serve, args=(50051, self))
@@ -160,6 +162,22 @@ class VisualCLRApp(tk.Tk):
         # prev = self.metrics.exception.get()
         # self.metrics.exception.set(prev + 1)
 
+    def class_loaded(self, event):
+        _fold_variable(self.metrics.classes_loaded, 1)
+        self.metrics.classes_loaded_v.set(
+                        f'Всего классов загружено: {self.metrics.classes_loaded.get()}')
+        _fold_variable(self.metrics.classes, +1)
+        self.metrics.classes_v.set(
+                        f'Классов загружено: {self.metrics.classes.get()}')
+
+    def class_unloaded(self, event):
+        _fold_variable(self.metrics.classes_unloaded, 1)
+        self.metrics.classes_unloaded_v.set(
+                        f'Всего классов выгружено: {self.metrics.classes_unloaded.get()}')
+        _fold_variable(self.metrics.classes, -1)
+        self.metrics.classes_v.set(
+                        f'Классов загружено: {self.metrics.classes.get()}')
+
     def _update_generation(self, g: GcGenerations, size: float):
         if GcGenerations.UNDEFINED != g:
             if GcGenerations.GEN0 == g:
@@ -192,9 +210,7 @@ class VisualCLRApp(tk.Tk):
             self.objects_data[id] = ManagedObject(
                 request.class_name,
                 request.size,
-                GcGenerations.from_value(g),
-                unix2str(request.time),
-                ''
+                GcGenerations.from_value(g)
             )
             # update gc gen
             self._update_generation(self.objects_data[id].generation, +request.size)
@@ -212,6 +228,8 @@ class VisualCLRApp(tk.Tk):
                     self._update_generation(object_data.generation, +object_data.size)
                 else:
                     # disposed
-                    object_data.disposed = unix2str(request.time)
+                    _fold_variable(self.metrics.objects_disposed, 1)
+                    self.metrics.objects_disposed_v.set(
+                        f'Объектов освобождено: {self.metrics.objects_disposed.get()}')
 
 

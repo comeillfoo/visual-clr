@@ -7,4 +7,4 @@ def unix2str(timestamp: float) -> str:
 
 SessionQueues = namedtuple('SessionQueues', ['pending', 'start', 'finish', 'logs', 'threads', 'stats', 'allocations', 'objects'])
 
-ManagedObject = namedtuple('ManagedObject', ['class_name', 'size', 'generation', 'created', 'disposed'])
+ManagedObject = namedtuple('ManagedObject', ['class_name', 'size', 'generation'])

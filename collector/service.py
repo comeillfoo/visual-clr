@@ -25,26 +25,20 @@ class LogCollectorService(logcollector_pb2_grpc.LogCollectorServicer):
     def _class_stamp_stub(self, request: TimestampRequest, operation: str) -> OperationResponse:
         if request.pid != self.app.active_pid.get():
             return OperationResponse(is_ok=False, response_type=ResponseTypes.RESET)
+        if operation == 'loaded':
+            self.app.event_generate('<<ClassLoaded>>')
+        elif operation == 'unloaded':
+            self.app.event_generate('<<ClassUnloaded>>')
+
         self._append_log(request.time, f'class {request.payload} {operation}')
         self._update_stats(request)
         return OperationResponse(is_ok=True, response_type=ResponseTypes.OK)
 
-
-    def ClassLoadStartStamp(self, request: TimestampRequest, context) -> OperationResponse:
-        return self._class_stamp_stub(request, 'started loading')
-
-
     def ClassLoadFinishedStamp(self, request: TimestampRequest, context) -> OperationResponse:
-        return self._class_stamp_stub(request, 'finished loading')
-
-
-    def ClassUnloadStartStamp(self, request: TimestampRequest, context) -> OperationResponse:
-        return self._class_stamp_stub(request, 'started unloading')
-
+        return self._class_stamp_stub(request, 'loaded')
 
     def ClassUnloadFinishedStamp(self, request: TimestampRequest, context) -> OperationResponse:
-        return self._class_stamp_stub(request, 'finished unloading')
-
+        return self._class_stamp_stub(request, 'unloaded')
 
     def StartSession(self, request: SessionStartRequest, context) -> OperationResponse:
         print(f'Pending Session {request.pid}: {request.cmd}')
@@ -56,7 +50,6 @@ class LogCollectorService(logcollector_pb2_grpc.LogCollectorServicer):
         else:
             # reject because of busyness
             return OperationResponse(is_ok=False, response_type=ResponseTypes.BUSY)
-
 
     def FinishSession(self, request: SessionFinishRequest, context) -> OperationResponse:
         print(f'Finishing Session for {request.pid}')
@@ -71,7 +64,7 @@ class LogCollectorService(logcollector_pb2_grpc.LogCollectorServicer):
         self.app.queues.threads.put((request, operation))
         self.app.event_generate('<<UpdateThreads>>')
 
-        self._append_log(request.time, f'thread[{request.id}] {operation}')
+        self._append_log(request.time, f'thread {request.id} {operation}')
         self._update_stats(request)
         return OperationResponse(is_ok=True, response_type=ResponseTypes.OK)
 
@@ -116,7 +109,7 @@ class LogCollectorService(logcollector_pb2_grpc.LogCollectorServicer):
 
         self.app.queues.allocations.put(request)
         self.app.event_generate('<<AllocateObject>>')
-        self._append_log(request.time, f'{request.class_name}[{request.size}] {request.object_gen.generation.value}')
+        self._append_log(request.time, f'object type {request.class_name} {request.size} bytes allocated')
         self._update_stats(request)
         return OperationResponse(is_ok=True, response_type=ResponseTypes.OK)
 

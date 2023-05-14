@@ -10,20 +10,25 @@ class ConnectionFrame(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
         # first layer: title or image
-        title = tk.Label(self, text='VisualCLR')
-        title.grid(row=0, column=0, columnspan=4)
+        title_pane = tk.Frame(self, pady=50)
+        title = tk.Label(title_pane, text='VisualCLR')
+        title.pack(fill=tk.X, expand=1)
+        title_pane.pack(fill=tk.X)
 
         # second layer: dropdown list
-        process_title = tk.Label(self, text='Процессы:')
-        process_title.grid(row=1, column=0, columnspan=1)
+        process_pane = tk.Frame(self, pady=10)
+        process_title = tk.Label(process_pane, text='Процессы:')
+        process_title.pack(side=tk.LEFT, fill=tk.X, expand=1)
 
         controller.active_pid = tk.IntVar(self)
 
-        processes = tk.OptionMenu(self, controller.active_pid, *(controller.processes.keys()))
-        processes.grid(row=1, column=1, columnspan=3)
+        processes = tk.OptionMenu(process_pane, controller.active_pid, *(controller.processes.keys()))
+        processes.pack(side=tk.LEFT, fill=tk.X, expand=1)
+        process_pane.pack(fill=tk.X)
 
         # third layer: buttons
-        btn_connect = tk.Button(self, text='Подключиться')
+        btns_pane = tk.Frame(self, pady=10)
+        btn_connect = tk.Button(btns_pane, text='Подключиться')
         def connect_cb(event):
             print(f'Connecting to {controller.active_pid.get()}...')
             controller.queues.start \
@@ -31,9 +36,9 @@ class ConnectionFrame(tk.Frame):
             controller.event_generate('<<StartSession>>')
 
         btn_connect.bind('<Button-1>', connect_cb)
-        btn_connect.grid(row=2, column=0, columnspan=2)
+        btn_connect.pack(side=tk.LEFT, fill=tk.X, expand=1)
 
-        btn_exit = tk.Button(self, text='Выход')
+        btn_exit = tk.Button(btns_pane, text='Выход')
         def exit_cb(event):
             controller.server.stop(None).wait()
             processes = set(controller.processes.keys())
@@ -43,7 +48,8 @@ class ConnectionFrame(tk.Frame):
             controller.destroy()
 
         btn_exit.bind('<Button-1>', exit_cb)
-        btn_exit.grid(row=2, column=2, columnspan=2)
+        btn_exit.pack(side=tk.LEFT, fill=tk.X, expand=1)
+        btns_pane.pack(fill=tk.X)
 
         def update_cb(event):
             pids = set(controller.processes.keys())
@@ -128,9 +134,9 @@ class LogsFrame(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
 
-        self.logs = tk.Text(self, wrap=None, font='roboto 8')
+        self.logs = tk.Text(self, wrap=tk.CHAR, font='roboto 10')
         self.logs.bind("<Key>", lambda e: "break")
-        self.logs.pack()
+        self.logs.pack(fill=tk.BOTH, expand=1)
 
         self.text = 'Логи'
         controller.traces = self
@@ -196,6 +202,27 @@ class MetricsFrame(tk.Frame):
             lambda: refresh(io_write, self.writes, self.write_kbytes, 'Записано, {}Кб', VALUES_LIMIT, UPDATE_TIMEOUT, difference=True,
             color='#DB7093', figsize=PLOT_SIZE))
         io_write.grid(row=2, column=1)
+
+        # loaded/unloaded classes and objects
+        self.classes = tk.IntVar(self, 0)
+        self.classes_v = tk.StringVar(self, 'Классов загружено: 0')
+        classes = tk.Label(self, textvariable=self.classes_v)
+        classes.grid(row=3, column=0, sticky=tk.W, padx=10, pady=5)
+
+        self.objects_disposed = tk.IntVar(self, 0)
+        self.objects_disposed_v = tk.StringVar(self, 'Объектов освобождено: 0')
+        objects_disposed = tk.Label(self, textvariable=self.objects_disposed_v)
+        objects_disposed.grid(row=3, column=1, sticky=tk.W, padx=10, pady=5)
+
+        self.classes_loaded = tk.IntVar(self, 0)
+        self.classes_loaded_v = tk.StringVar(self, 'Всего классов загружено: 0')
+        classes_loaded = tk.Label(self, textvariable=self.classes_loaded_v)
+        classes_loaded.grid(row=4, column=0, sticky=tk.W, padx=10, pady=5)
+
+        self.classes_unloaded = tk.IntVar(self, 0)
+        self.classes_unloaded_v = tk.StringVar(self, 'Всего классов выгружено: 0')
+        classes_unloaded = tk.Label(self, textvariable=self.classes_unloaded_v)
+        classes_unloaded.grid(row=4, column=1, sticky=tk.W, padx=10, pady=5)
 
         self.text = 'Метрики'
         controller.metrics = self
@@ -272,7 +299,7 @@ class GcFrame(tk.Frame):
 
         UPDATE_TIMEOUT = 2000
         VALUES_LIMIT = 21
-        PLOT_SIZE = (8, 2)
+        PLOT_SIZE = (10, 2)
 
         # gen 0
         gen0_header = tk.Label(self, text='GC Generation 0 (Поколение 0)', anchor='w')
@@ -283,7 +310,7 @@ class GcFrame(tk.Frame):
         gen0.after(UPDATE_TIMEOUT,
             lambda: refresh(
                 gen0, self.usage_gen0, self.current_gen0, 'Gen 0: {:.2f}Кб',VALUES_LIMIT, UPDATE_TIMEOUT,
-                color='r', figsize=PLOT_SIZE))
+                color='#f6f64d', figsize=PLOT_SIZE))
         gen0.pack(fill=tk.BOTH, expand=1)
 
         # gen 1
@@ -294,7 +321,7 @@ class GcFrame(tk.Frame):
         self.current_gen1 = tk.StringVar(gen1, '0.0')
         gen1.after(UPDATE_TIMEOUT,
             lambda: refresh(gen1, self.usage_gen1, self.current_gen1, 'Gen 1: {:.2f}Кб', VALUES_LIMIT, UPDATE_TIMEOUT,
-            color='r', figsize=PLOT_SIZE))
+            color='#ffcc25', figsize=PLOT_SIZE))
         gen1.pack(fill=tk.BOTH, expand=1)
 
         # gen 2
@@ -305,7 +332,7 @@ class GcFrame(tk.Frame):
         self.current_gen2 = tk.StringVar(gen2, '0.0')
         gen2.after(UPDATE_TIMEOUT,
             lambda: refresh(gen2, self.usage_gen2, self.current_gen2, 'Gen 2: {:.2f}Кб', VALUES_LIMIT, UPDATE_TIMEOUT,
-            color='r', figsize=PLOT_SIZE))
+            color='#ff9f17', figsize=PLOT_SIZE))
         gen2.pack(fill=tk.BOTH, expand=1)
 
         # gc large-object heap
@@ -316,7 +343,7 @@ class GcFrame(tk.Frame):
         self.current_loh = tk.StringVar(loh, '0.0')
         loh.after(UPDATE_TIMEOUT,
             lambda: refresh(loh, self.usage_loh, self.current_loh, 'LOH: {:.2f}Кб', VALUES_LIMIT, UPDATE_TIMEOUT,
-            color='r', figsize=PLOT_SIZE))
+            color='#ff7026', figsize=PLOT_SIZE))
         loh.pack(fill=tk.BOTH, expand=1)
 
         # gc pinned-object heap
@@ -327,7 +354,7 @@ class GcFrame(tk.Frame):
         self.current_poh = tk.StringVar(poh, '0.0')
         loh.after(UPDATE_TIMEOUT,
             lambda: refresh(poh, self.usage_poh, self.current_poh, 'POH: {:.2f}Кб', VALUES_LIMIT, UPDATE_TIMEOUT,
-            color='r', figsize=PLOT_SIZE))
+            color='#f63838', figsize=PLOT_SIZE))
         poh.pack(fill=tk.BOTH, expand=1)
 
         self.text = 'GC'
