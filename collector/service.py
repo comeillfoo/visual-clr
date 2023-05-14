@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import logcollector_pb2_grpc
-from logcollector_pb2 import OperationResponse, TimestampRequest, TimestampIdRequest, ResponseTypes, SessionStartRequest, SessionFinishRequest
+from logcollector_pb2 import ResponseTypes, OperationResponse, TimestampRequest, \
+    TimestampIdRequest, SessionStartRequest, SessionFinishRequest, \
+    ObjectAllocatedStampRequest, UpdateGenerationsRequest
 from utility import unix2str
 from enums import ThreadStates
 
@@ -107,6 +109,24 @@ class LogCollectorService(logcollector_pb2_grpc.LogCollectorServicer):
 
     def JitCompilationFinishedStamp(self, request: TimestampRequest, context) -> OperationResponse:
         return self._jit_compilation_stub(request, 'finished')
+
+    def ObjectAllocationStamp(self, request: ObjectAllocatedStampRequest, context) -> OperationResponse:
+        if request.pid != self.app.active_pid.get():
+            return OperationResponse(is_ok=False, response_type=ResponseTypes.RESET)
+
+        self.app.queues.allocations.put(request)
+        self.app.event_generate('<<AllocateObject>>')
+        self._append_log(request.time, f'{request.class_name}[{request.object_size}] {request.object_gen.generation}')
+        self._update_stats(request)
+        return OperationResponse(is_ok=True, response_type=ResponseTypes.OK)
+
+    def GarbageCollectionFinishedStamp(self, request: UpdateGenerationsRequest, context) -> OperationResponse:
+        if request.pid != self.app.active_pid.get():
+            return OperationResponse(is_ok=False, response_type=ResponseTypes.RESET)
+
+        self._append_log(request.time, f'GC collection finished')
+        self._update_stats(request)
+        return OperationResponse(is_ok=True, response_type=ResponseTypes.OK)
 
 
 

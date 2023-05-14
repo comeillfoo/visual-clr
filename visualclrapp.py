@@ -20,7 +20,8 @@ class VisualCLRApp(tk.Tk):
         # init members
         self.processes = {}
         self.processes[0] = { 'pid': 0, 'cmd': 'debug', 'path': os.environ['PATH'] }
-        self.queues = SessionQueues(Queue(), Queue(1), Queue(), Queue(), Queue(), Queue())
+        self.queues = SessionQueues(Queue(), Queue(1), Queue(), \
+                                    Queue(), Queue(), Queue(), Queue())
         self.server = grpc.server(futures.ThreadPoolExecutor(max_workers=4))
         self.threads_data = {}
 
@@ -50,6 +51,7 @@ class VisualCLRApp(tk.Tk):
         self.bind('<<UpdateThreads>>', self.update_threads)
         self.bind('<<UpdateStats>>', self.update_stats)
         self.bind('<<IncrementExceptions>>', self.increment_exceptions)
+        self.bind('<<AllocateObject>>', self.allocate_object)
 
         # setup context
         # start collector
@@ -148,3 +150,10 @@ class VisualCLRApp(tk.Tk):
     def increment_exceptions(self, event):
         prev = self.metrics.exception.get()
         self.metrics.exception.set(prev + 1)
+
+    def allocate_object(self, event):
+        if not self.queues.allocations.empty():
+            request = self.queues.allocations.get()
+            prev = float(self.metrics.memory.get()) * 1024
+            self.metrics.memory.set(str((prev + request.object_size) / 1024))
+

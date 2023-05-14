@@ -147,7 +147,7 @@ class MetricsFrame(tk.Frame):
         self.threads = [0] * VALUES_LIMIT
         self.thread = tk.IntVar(threads, 0)
         threads.after(UPDATE_TIMEOUT,
-            lambda: refresh(threads, self.threads, self.thread, 'Число потоков: {}', VALUES_LIMIT, UPDATE_TIMEOUT, color='g'))
+            lambda: refresh(threads, self.threads, self.thread, 'Число потоков: {:.0f}', VALUES_LIMIT, UPDATE_TIMEOUT, color='g'))
         threads.grid(row=0, column=0)
 
         # exceptions number
@@ -155,7 +155,7 @@ class MetricsFrame(tk.Frame):
         self.exceptions = [0] * VALUES_LIMIT
         self.exception = tk.IntVar(exceptions, 0)
         exceptions.after(UPDATE_TIMEOUT,
-            lambda: refresh(exceptions, self.exceptions, self.exception, 'Выброшено исключений: {}', VALUES_LIMIT, UPDATE_TIMEOUT, color='r'))
+            lambda: refresh(exceptions, self.exceptions, self.exception, 'Выброшено исключений: {:.0f}', VALUES_LIMIT, UPDATE_TIMEOUT, color='r'))
         exceptions.grid(row=0, column=1)
 
         # cpu usage
@@ -165,6 +165,14 @@ class MetricsFrame(tk.Frame):
         cpu.after(UPDATE_TIMEOUT,
             lambda: refresh(cpu, self.cpus, self.cpu, 'CPU, {:.2f}%', VALUES_LIMIT, UPDATE_TIMEOUT, color='b'))
         cpu.grid(row=1, column=0)
+
+        # memory usage
+        memory = tk.Frame(self)
+        self.memories = [0.0] * VALUES_LIMIT
+        self.memory = tk.StringVar(memory, '0.0')
+        memory.after(UPDATE_TIMEOUT,
+            lambda: refresh(memory, self.memories, self.memory, 'Mem, {:.2f}Кб', VALUES_LIMIT, UPDATE_TIMEOUT, color='#A0522D'))
+        memory.grid(row=1, column=1)
 
         # io usage
         io_read = tk.Frame(self)
