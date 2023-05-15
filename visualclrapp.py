@@ -206,6 +206,19 @@ class VisualCLRApp(tk.Tk):
 
             id = request.object_gen.id
             g = request.object_gen.generation.value
+
+            objects = self.objects.stats
+            classes = set(map(lambda child: objects.set(child, 'class'), objects.get_children('')))
+            if request.class_name not in classes:
+                objects.insert('', tk.END, \
+                                values=(request.class_name, round(request.size / 1024, 2)))
+            else:
+                updated_children = filter(lambda child: objects.set(child, 'class') == request.class_name,
+                                              objects.get_children(''))
+                for child in updated_children:
+                    prev = float(objects.set(child, 'total')) * 1024
+                    objects.set(child, 'total', round((prev + request.size) / 1024, 2))
+
             # save object
             self.objects_data[id] = ManagedObject(
                 request.class_name,
@@ -218,6 +231,7 @@ class VisualCLRApp(tk.Tk):
     def update_objects(self, event):
         if not self.queues.objects.empty():
             request = self.queues.objects.get()
+            objects = self.objects.stats
 
             for object in request.objects:
                 object_data = self.objects_data[object.id]
@@ -228,6 +242,11 @@ class VisualCLRApp(tk.Tk):
                     self._update_generation(object_data.generation, +object_data.size)
                 else:
                     # disposed
+                    updated_children = filter(lambda child: objects.set(child, 'class') == object_data.class_name, objects.get_children(''))
+                    for child in updated_children:
+                        prev = float(objects.set(child, 'total')) * 1024
+                        objects.set(child, 'total', round((prev - object_data.size) / 1024, 2))
+
                     _fold_variable(self.metrics.objects_disposed, 1)
                     self.metrics.objects_disposed_v.set(
                         f'Объектов освобождено: {self.metrics.objects_disposed.get()}')

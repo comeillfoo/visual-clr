@@ -228,15 +228,6 @@ class MetricsFrame(tk.Frame):
         controller.metrics = self
 
 
-class ObjectsFrame(tk.Frame):
-    def __init__(self, parent, controller):
-        tk.Frame.__init__(self, parent)
-
-
-        self.text = 'Объекты'
-        controller.objects = self
-
-
 class ThreadsFrame(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
@@ -291,6 +282,34 @@ class ThreadsFrame(tk.Frame):
 
         self.text = 'Потоки'
         controller.threads = self
+
+
+class ObjectsFrame(tk.Frame):
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
+
+        def sort_column(tv: ttk.Treeview, column: str, reverse: bool = False, unboxer = lambda value: value):
+            items = [(unboxer(tv.set(child, column)), child) for child in tv.get_children('')]
+            items.sort(key=lambda item: item[0], reverse=reverse) # sort by value
+
+            for index, (_, child) in enumerate(items):
+                tv.move(child, '', index)
+
+            tv.heading(column, command=lambda _column=column: \
+                       sort_column(tv, _column, not reverse, unboxer))
+
+
+        columns = ('class', 'total') #, 'gen0', 'gen1', 'gen2', 'loh', 'poh')
+        headings = ('Класс', 'Память, Кб') #, 'Gen 0, Кб', 'Gen 1, Кб', 'Gen 2, Кб', 'LOH, Кб', 'POH, Кб')
+        unboxers = (str, float)
+        self.stats = ttk.Treeview(self, columns=columns, show='headings')
+        for (column, heading, unboxer) in zip(columns, headings, unboxers):
+            self.stats.heading(column, text=heading, command=lambda _column=column: \
+                               sort_column(self.stats, _column, unboxer=unboxer))
+        self.stats.pack(fill=tk.BOTH, expand=1)
+
+        self.text = 'Объекты'
+        controller.objects = self
 
 
 class GcFrame(tk.Frame):
