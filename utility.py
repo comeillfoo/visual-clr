@@ -7,4 +7,11 @@ def unix2str(timestamp: float) -> str:
 
 SessionQueues = namedtuple('SessionQueues', ['pending', 'start', 'finish', 'logs', 'threads', 'stats', 'allocations', 'objects'])
 
-ManagedObject = namedtuple('ManagedObject', ['class_name', 'size', 'generation'])
+class ManagedObject:
+    def __init__(self, class_name, size, generation, is_retained):
+        self.class_name = class_name
+        self.size = size
+        self.generation = generation
+        self.is_retained = is_retained
+
+# ManagedObject = namedtuple('ManagedObject', ['class_name', 'size', 'generation', 'is_retained'])

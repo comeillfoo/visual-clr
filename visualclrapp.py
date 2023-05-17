@@ -110,11 +110,54 @@ class VisualCLRApp(tk.Tk):
             self.init_tabs(data)
 
     def init_tabs(self, data):
+        # common
         self.common.pid.set(f"PID: {data['pid']}")
         self.common.path.set(f"PATH: {data['path']}")
         self.common.sdks.set(f"SDKs: {list_sdks(data['path'])}")
         self.common.rts.set(f"Runtimes: {list_runtimes(data['path'])}")
         self.common.cmd.set(f"CMD: {data['cmd']}")
+
+        # metrics
+        reset_list = [0.0] * self.metrics.VALUES_LIMIT
+        self.metrics.threads = reset_list.copy()
+        self.metrics.thread.set(0)
+        self.metrics.exceptions = reset_list.copy()
+        self.metrics.exception.set(0)
+        self.metrics.cpus = reset_list.copy()
+        self.metrics.cpu.set('0.0')
+        self.metrics.memories = reset_list.copy()
+        self.metrics.memory.set('0.0')
+        self.metrics.reads = reset_list.copy()
+        self.metrics.read_kbytes.set('0.0')
+        self.metrics.writes = reset_list.copy()
+        self.metrics.write_kbytes.set('0.0')
+        self.metrics.classes.set(0)
+        self.metrics.objects_disposed.set(0)
+        self.metrics.classes_loaded.set(0)
+        self.metrics.classes_unloaded.set(0)
+        # TODO: update labels
+        # logs
+        self.traces.logs.delete('1.0', tk.END)
+        self.objects.stats.delete(*self.objects.stats.get_children(''))
+        # threads
+        self.threads.listv.set([])
+
+        # gc
+        reset_list = [0.0] * self.gc.VALUES_LIMIT
+        self.gc.usage_gen0 = reset_list.copy()
+        self.gc.current_gen0.set('0.0')
+        self.gc.usage_gen1 = reset_list.copy()
+        self.gc.current_gen1.set('0.0')
+        self.gc.usage_gen2 = reset_list.copy()
+        self.gc.current_gen2.set('0.0')
+        self.gc.usage_loh = reset_list.copy()
+        self.gc.current_loh.set('0.0')
+        self.gc.usage_poh = reset_list.copy()
+        self.gc.current_poh.set('0.0')
+
+        # self fields
+        self.threads_data = {}
+        self.objects_data = {}
 
     def append_log(self, event):
         while not self.queues.logs.empty():
@@ -211,7 +254,7 @@ class VisualCLRApp(tk.Tk):
             classes = set(map(lambda child: objects.set(child, 'class'), objects.get_children('')))
             if request.class_name not in classes:
                 objects.insert('', tk.END, \
-                                values=(request.class_name, round(request.size / 1024, 2)))
+                                values=(request.class_name, round(request.size / 1024, 2), 0.0))
             else:
                 updated_children = filter(lambda child: objects.set(child, 'class') == request.class_name,
                                               objects.get_children(''))
@@ -223,7 +266,8 @@ class VisualCLRApp(tk.Tk):
             self.objects_data[id] = ManagedObject(
                 request.class_name,
                 request.size,
-                GcGenerations.from_value(g)
+                GcGenerations.from_value(g),
+                False
             )
             # update gc gen
             self._update_generation(self.objects_data[id].generation, +request.size)
@@ -240,12 +284,21 @@ class VisualCLRApp(tk.Tk):
                     # update gc gens
                     object_data.generation = GcGenerations.from_value(object.generation.value)
                     self._update_generation(object_data.generation, +object_data.size)
+                    # survived collection
+                    object_data.is_retained = True
+                    updated_children = filter(lambda child: objects.set(child, 'class') == object_data.class_name, objects.get_children(''))
+                    for child in updated_children:
+                        prev = float(objects.set(child, 'retained')) * 1024
+                        objects.set(child, 'retained', round((prev + object_data.size) / 1024, 2))
                 else:
                     # disposed
                     updated_children = filter(lambda child: objects.set(child, 'class') == object_data.class_name, objects.get_children(''))
                     for child in updated_children:
                         prev = float(objects.set(child, 'total')) * 1024
                         objects.set(child, 'total', round((prev - object_data.size) / 1024, 2))
+                        if object_data.is_retained:
+                            prev = float(objects.set(child, 'retained')) * 1024
+                            objects.set(child, 'retained', round((prev - object_data.size) / 1024, 2))
 
                     _fold_variable(self.metrics.objects_disposed, 1)
                     self.metrics.objects_disposed_v.set(

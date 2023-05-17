@@ -147,59 +147,59 @@ class MetricsFrame(tk.Frame):
         tk.Frame.__init__(self, parent)
 
         UPDATE_TIMEOUT = 2000
-        VALUES_LIMIT = 11
+        self.VALUES_LIMIT = 11
         PLOT_SIZE = (5, 2.5)
 
         # threads number
         threads = tk.Frame(self)
-        self.threads = [0] * VALUES_LIMIT
+        self.threads = [0] * self.VALUES_LIMIT
         self.thread = tk.IntVar(threads, 0)
         threads.after(UPDATE_TIMEOUT,
-            lambda: refresh(threads, self.threads, self.thread, 'Число потоков: {:.0f}', VALUES_LIMIT, UPDATE_TIMEOUT,
+            lambda: refresh(threads, self.threads, self.thread, 'Число потоков: {:.0f}', self.VALUES_LIMIT, UPDATE_TIMEOUT,
             color='g', figsize=PLOT_SIZE))
         threads.grid(row=0, column=0)
 
         # exceptions number
         exceptions = tk.Frame(self)
-        self.exceptions = [0] * VALUES_LIMIT
+        self.exceptions = [0] * self.VALUES_LIMIT
         self.exception = tk.IntVar(exceptions, 0)
         exceptions.after(UPDATE_TIMEOUT,
-            lambda: refresh(exceptions, self.exceptions, self.exception, 'Выброшено исключений: {:.0f}', VALUES_LIMIT, UPDATE_TIMEOUT,
+            lambda: refresh(exceptions, self.exceptions, self.exception, 'Выброшено исключений: {:.0f}', self.VALUES_LIMIT, UPDATE_TIMEOUT,
             color='r', figsize=PLOT_SIZE))
         exceptions.grid(row=0, column=1)
 
         # cpu usage
         cpu = tk.Frame(self)
-        self.cpus = [0.0] * VALUES_LIMIT
+        self.cpus = [0.0] * self.VALUES_LIMIT
         self.cpu = tk.StringVar(cpu, '0.0')
         cpu.after(UPDATE_TIMEOUT,
-            lambda: refresh(cpu, self.cpus, self.cpu, 'CPU, {:.2f}%', VALUES_LIMIT, UPDATE_TIMEOUT,
+            lambda: refresh(cpu, self.cpus, self.cpu, 'CPU, {:.2f}%', self.VALUES_LIMIT, UPDATE_TIMEOUT,
             color='b', figsize=PLOT_SIZE))
         cpu.grid(row=1, column=0)
 
         # memory usage
         memory = tk.Frame(self)
-        self.memories = [0.0] * VALUES_LIMIT
+        self.memories = [0.0] * self.VALUES_LIMIT
         self.memory = tk.StringVar(memory, '0.0')
         memory.after(UPDATE_TIMEOUT,
-            lambda: refresh(memory, self.memories, self.memory, 'Mem, {:.2f}Кб', VALUES_LIMIT, UPDATE_TIMEOUT,
+            lambda: refresh(memory, self.memories, self.memory, 'Mem, {:.2f}Кб', self.VALUES_LIMIT, UPDATE_TIMEOUT,
             color='#A0522D', figsize=PLOT_SIZE))
         memory.grid(row=1, column=1)
 
         # io usage
         io_read = tk.Frame(self)
-        self.reads = [0.0] * VALUES_LIMIT
+        self.reads = [0.0] * self.VALUES_LIMIT
         self.read_kbytes = tk.StringVar(io_read, '0.0')
         io_read.after(UPDATE_TIMEOUT,
-            lambda: refresh(io_read, self.reads, self.read_kbytes, 'Прочитано, {}Кб', VALUES_LIMIT, UPDATE_TIMEOUT, difference=True,
+            lambda: refresh(io_read, self.reads, self.read_kbytes, 'Прочитано, {}Кб', self.VALUES_LIMIT, UPDATE_TIMEOUT, difference=True,
             color='#20B2AA', figsize=PLOT_SIZE))
         io_read.grid(row=2, column=0)
 
         io_write = tk.Frame(self)
-        self.writes = [0.0] * VALUES_LIMIT
+        self.writes = [0.0] * self.VALUES_LIMIT
         self.write_kbytes = tk.StringVar(io_write, '0.0')
         io_write.after(UPDATE_TIMEOUT,
-            lambda: refresh(io_write, self.writes, self.write_kbytes, 'Записано, {}Кб', VALUES_LIMIT, UPDATE_TIMEOUT, difference=True,
+            lambda: refresh(io_write, self.writes, self.write_kbytes, 'Записано, {}Кб', self.VALUES_LIMIT, UPDATE_TIMEOUT, difference=True,
             color='#DB7093', figsize=PLOT_SIZE))
         io_write.grid(row=2, column=1)
 
@@ -299,9 +299,9 @@ class ObjectsFrame(tk.Frame):
                        sort_column(tv, _column, not reverse, unboxer))
 
 
-        columns = ('class', 'total') #, 'gen0', 'gen1', 'gen2', 'loh', 'poh')
-        headings = ('Класс', 'Память, Кб') #, 'Gen 0, Кб', 'Gen 1, Кб', 'Gen 2, Кб', 'LOH, Кб', 'POH, Кб')
-        unboxers = (str, float)
+        columns = ('class', 'total', 'retained') #, 'gen0', 'gen1', 'gen2', 'loh', 'poh')
+        headings = ('Класс', 'Занимаемая память, Кб', 'Утекаемая память, Кб') #, 'Gen 0, Кб', 'Gen 1, Кб', 'Gen 2, Кб', 'LOH, Кб', 'POH, Кб')
+        unboxers = (str, float, float)
         self.stats = ttk.Treeview(self, columns=columns, show='headings')
         for (column, heading, unboxer) in zip(columns, headings, unboxers):
             self.stats.heading(column, text=heading, command=lambda _column=column: \
@@ -317,18 +317,18 @@ class GcFrame(tk.Frame):
         tk.Frame.__init__(self, parent)
 
         UPDATE_TIMEOUT = 2000
-        VALUES_LIMIT = 21
+        self.VALUES_LIMIT = 21
         PLOT_SIZE = (10, 2)
 
         # gen 0
         gen0_header = tk.Label(self, text='GC Generation 0 (Поколение 0)', anchor='w')
         gen0_header.pack(fill=tk.BOTH, expand=1, padx=10)
         gen0 = tk.Frame(self)
-        self.usage_gen0 = [0.0] * VALUES_LIMIT
+        self.usage_gen0 = [0.0] * self.VALUES_LIMIT
         self.current_gen0 = tk.StringVar(gen0, '0.0')
         gen0.after(UPDATE_TIMEOUT,
             lambda: refresh(
-                gen0, self.usage_gen0, self.current_gen0, 'Gen 0: {:.2f}Кб',VALUES_LIMIT, UPDATE_TIMEOUT,
+                gen0, self.usage_gen0, self.current_gen0, 'Gen 0: {:.2f}Кб',self.VALUES_LIMIT, UPDATE_TIMEOUT,
                 color='#f6f64d', figsize=PLOT_SIZE))
         gen0.pack(fill=tk.BOTH, expand=1)
 
@@ -336,10 +336,10 @@ class GcFrame(tk.Frame):
         gen1_header = tk.Label(self, text='GC Generation 1 (Поколение 1)', anchor='w')
         gen1_header.pack(fill=tk.BOTH, expand=1, padx=10)
         gen1 = tk.Frame(self)
-        self.usage_gen1 = [0.0] * VALUES_LIMIT
+        self.usage_gen1 = [0.0] * self.VALUES_LIMIT
         self.current_gen1 = tk.StringVar(gen1, '0.0')
         gen1.after(UPDATE_TIMEOUT,
-            lambda: refresh(gen1, self.usage_gen1, self.current_gen1, 'Gen 1: {:.2f}Кб', VALUES_LIMIT, UPDATE_TIMEOUT,
+            lambda: refresh(gen1, self.usage_gen1, self.current_gen1, 'Gen 1: {:.2f}Кб', self.VALUES_LIMIT, UPDATE_TIMEOUT,
             color='#ffcc25', figsize=PLOT_SIZE))
         gen1.pack(fill=tk.BOTH, expand=1)
 
@@ -347,10 +347,10 @@ class GcFrame(tk.Frame):
         gen2_header = tk.Label(self, text='GC Generation 2 (Поколение 2)', anchor='w')
         gen2_header.pack(fill=tk.BOTH, expand=1, padx=10)
         gen2 = tk.Frame(self)
-        self.usage_gen2 = [0.0] * VALUES_LIMIT
+        self.usage_gen2 = [0.0] * self.VALUES_LIMIT
         self.current_gen2 = tk.StringVar(gen2, '0.0')
         gen2.after(UPDATE_TIMEOUT,
-            lambda: refresh(gen2, self.usage_gen2, self.current_gen2, 'Gen 2: {:.2f}Кб', VALUES_LIMIT, UPDATE_TIMEOUT,
+            lambda: refresh(gen2, self.usage_gen2, self.current_gen2, 'Gen 2: {:.2f}Кб', self.VALUES_LIMIT, UPDATE_TIMEOUT,
             color='#ff9f17', figsize=PLOT_SIZE))
         gen2.pack(fill=tk.BOTH, expand=1)
 
@@ -358,10 +358,10 @@ class GcFrame(tk.Frame):
         loh_header = tk.Label(self, text='Large-object heap (Куча больших объектов)', anchor='w')
         loh_header.pack(fill=tk.BOTH, expand=1, padx=10)
         loh = tk.Frame(self)
-        self.usage_loh = [0.0] * VALUES_LIMIT
+        self.usage_loh = [0.0] * self.VALUES_LIMIT
         self.current_loh = tk.StringVar(loh, '0.0')
         loh.after(UPDATE_TIMEOUT,
-            lambda: refresh(loh, self.usage_loh, self.current_loh, 'LOH: {:.2f}Кб', VALUES_LIMIT, UPDATE_TIMEOUT,
+            lambda: refresh(loh, self.usage_loh, self.current_loh, 'LOH: {:.2f}Кб', self.VALUES_LIMIT, UPDATE_TIMEOUT,
             color='#ff7026', figsize=PLOT_SIZE))
         loh.pack(fill=tk.BOTH, expand=1)
 
@@ -369,10 +369,10 @@ class GcFrame(tk.Frame):
         poh_header = tk.Label(self, text='Pinned-object heap (Куча закрепленных объектов)', anchor='w')
         poh_header.pack(fill=tk.BOTH, expand=1, padx=10)
         poh = tk.Frame(self)
-        self.usage_poh = [0.0] * VALUES_LIMIT
+        self.usage_poh = [0.0] * self.VALUES_LIMIT
         self.current_poh = tk.StringVar(poh, '0.0')
         loh.after(UPDATE_TIMEOUT,
-            lambda: refresh(poh, self.usage_poh, self.current_poh, 'POH: {:.2f}Кб', VALUES_LIMIT, UPDATE_TIMEOUT,
+            lambda: refresh(poh, self.usage_poh, self.current_poh, 'POH: {:.2f}Кб', self.VALUES_LIMIT, UPDATE_TIMEOUT,
             color='#f63838', figsize=PLOT_SIZE))
         poh.pack(fill=tk.BOTH, expand=1)
 
