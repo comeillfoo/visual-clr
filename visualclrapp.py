@@ -189,9 +189,23 @@ class VisualCLRApp(tk.Tk):
                 self.threads_data[request.id]['destroyed'] = unix2str(request.time)
                 self.threads.listv.set(list(self.threads_data.keys()))
             if op == ThreadStates.RESUMED:
-                self.threads_data[request.id]['state'] = 'выполняемый'
+                if request.id not in self.threads_data:
+                    self.threads_data[request.id] = {
+                        'state': 'выполняемый',
+                        'created': unix2str(request.time),
+                        'destroyed': ''
+                    }
+                else:
+                    self.threads_data[request.id]['state'] = 'выполняемый'
             if op == ThreadStates.SUSPENDED:
-                self.threads_data[request.id]['state'] = 'ожидает'
+                if request.id not in self.threads_data:
+                    self.threads_data[request.id] = {
+                        'state': 'ожидает',
+                        'created': unix2str(request.time),
+                        'destroyed': ''
+                    }
+                else:
+                    self.threads_data[request.id]['state'] = 'ожидает'
 
     def update_stats(self, event):
         if not self.queues.stats.empty():
@@ -278,6 +292,8 @@ class VisualCLRApp(tk.Tk):
             objects = self.objects.stats
 
             for object in request.objects:
+                if object.id not in self.objects_data:
+                    self.objects_data[object.id] = ManagedObject('Unknown', 0, GcGenerations.UNDEFINED, False)
                 object_data = self.objects_data[object.id]
                 self._update_generation(object_data.generation, -object_data.size)
                 if object.generation.is_valid:
@@ -285,11 +301,12 @@ class VisualCLRApp(tk.Tk):
                     object_data.generation = GcGenerations.from_value(object.generation.value)
                     self._update_generation(object_data.generation, +object_data.size)
                     # survived collection
-                    object_data.is_retained = True
-                    updated_children = filter(lambda child: objects.set(child, 'class') == object_data.class_name, objects.get_children(''))
-                    for child in updated_children:
-                        prev = float(objects.set(child, 'retained')) * 1024
-                        objects.set(child, 'retained', round((prev + object_data.size) / 1024, 2))
+                    if not object_data.is_retained:
+                        updated_children = filter(lambda child: objects.set(child, 'class') == object_data.class_name, objects.get_children(''))
+                        for child in updated_children:
+                            prev = float(objects.set(child, 'retained')) * 1024
+                            objects.set(child, 'retained', round((prev + object_data.size) / 1024, 2))
+                        object_data.is_retained = True
                 else:
                     # disposed
                     updated_children = filter(lambda child: objects.set(child, 'class') == object_data.class_name, objects.get_children(''))
@@ -299,6 +316,7 @@ class VisualCLRApp(tk.Tk):
                         if object_data.is_retained:
                             prev = float(objects.set(child, 'retained')) * 1024
                             objects.set(child, 'retained', round((prev - object_data.size) / 1024, 2))
+                            object_data.is_retained = False
 
                     _fold_variable(self.metrics.objects_disposed, 1)
                     self.metrics.objects_disposed_v.set(
