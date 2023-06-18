@@ -17,3 +17,4 @@ export CORECLR_PROFILER="{DF63A541-5A33-4611-8829-F4E495985EE3}"
 2. Run GUI app (`python3 __main__.py`)
 3. Run .NET app using established environment (`dotnet ./bin/Debug/*/Program.dll`)
 4. Wait until PID of the app appears at the "connect window" then click "Connect".
+![connect-window](./connect.jpg)
